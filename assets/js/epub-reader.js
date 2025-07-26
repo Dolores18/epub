@@ -8,17 +8,17 @@ function testLibraries() {
     console.log('库加载测试:');
     console.log('typeof JSZip:', typeof JSZip);
     console.log('typeof ePub:', typeof ePub);
-    
+
     if (typeof JSZip === 'undefined') {
         console.error('❌ JSZip 未能正确加载！');
     } else {
         console.log('✅ JSZip 加载成功！');
     }
-    
+
     if (typeof ePub === 'undefined') {
         console.error('❌ epub.js 未能正确加载！');
         // 在页面上也显示错误
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const loading = document.getElementById('loading');
             if (loading) {
                 loading.innerHTML = '<div class="error"><h3>epub.js 加载失败</h3><p>请检查网络连接或刷新页面重试</p></div>';
@@ -27,7 +27,7 @@ function testLibraries() {
     } else {
         console.log('✅ epub.js 加载成功！');
     }
-    
+
     // 测试基本 JavaScript 功能
     console.log('JavaScript 执行测试 - 时间:', new Date().toLocaleString());
 }
@@ -95,11 +95,11 @@ async function initReader(file = null) {
         debugLog('等待书籍元数据加载...');
         debugLog('书籍对象:', book);
         debugLog('书籍 ready 属性:', book.ready);
-        
+
         // 尝试直接创建渲染器，不等待 book.ready
         try {
             debugLog('跳过 book.ready，直接创建渲染器...');
-            
+
             // 创建渲染器
             debugLog('创建渲染器...');
             rendition = book.renderTo('viewer', {
@@ -107,8 +107,8 @@ async function initReader(file = null) {
                 height: '100%',
                 spread: 'none',
                 allowScriptedContent: true,
-                flow: 'scrolled',  // 使用滚动模式，然后手动控制分页
-                manager: 'continuous'  // 使用连续管理器
+                flow: 'paginated',  // 使用分页模式，自动处理行截断
+                manager: 'default'  // 使用默认管理器
             });
 
             // 设置日文字体主题
@@ -126,17 +126,8 @@ async function initReader(file = null) {
             await rendition.display();
             debugLog('第一章显示成功');
 
-            // 计算页面信息
-            setTimeout(() => {
-                const viewer = document.getElementById('viewer');
-                if (viewer) {
-                    pageHeight = viewer.clientHeight;
-                    const contentHeight = viewer.scrollHeight;
-                    totalPages = Math.ceil(contentHeight / pageHeight);
-                    console.log(`页面高度: ${pageHeight}, 内容高度: ${contentHeight}, 总页数: ${totalPages}`);
-                    updatePageInfo();
-                }
-            }, 1000);
+            // 分页模式下不需要手动计算页面信息
+            // epub.js 会自动处理分页和行截断问题
 
             // 隐藏加载提示
             document.getElementById('loading').style.display = 'none';
@@ -165,29 +156,29 @@ async function initReader(file = null) {
             updateProgress();
 
             debugLog('阅读器初始化完成！');
-            
+
         } catch (renderError) {
             debugLog('直接渲染失败，尝试等待 book.ready:', renderError.message);
-            
+
             // 如果直接渲染失败，再尝试等待 book.ready
             const readyPromise = book.ready;
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('加载超时，请检查文件格式或尝试其他电子书')), 10000);
             });
-            
+
             await Promise.race([readyPromise, timeoutPromise]);
             debugLog('书籍元数据加载完成');
-            
+
             // 重新创建渲染器
             rendition = book.renderTo('viewer', {
                 width: '100%',
                 height: '100%',
                 spread: 'none',
                 allowScriptedContent: true,
-                flow: 'scrolled',  // 使用滚动模式，然后手动控制分页
-                manager: 'continuous'  // 使用连续管理器
+                flow: 'paginated',  // 使用分页模式，自动处理行截断
+                manager: 'default'  // 使用默认管理器
             });
-            
+
             await rendition.display();
             document.getElementById('loading').style.display = 'none';
             await loadTOC();
@@ -277,17 +268,8 @@ function prevPage() {
     if (rendition) {
         console.log('执行上一页');
         try {
-            if (currentPage > 0) {
-                currentPage--;
-                const offset = currentPage * pageHeight;
-                // 使用平滑滚动，避免跳动
-                rendition.scrollTo(offset, { animate: true });
-                updatePageInfo();
-            } else {
-                // 如果当前章节的第一页，跳转到上一章节的最后一页
-                rendition.prev();
-                currentPage = 0;
-            }
+            // 使用 epub.js 的标准翻页方法，自动处理行截断
+            rendition.prev();
         } catch (error) {
             console.error('上一页失败:', error);
         }
@@ -301,17 +283,8 @@ function nextPage() {
     if (rendition) {
         console.log('执行下一页');
         try {
-            if (currentPage < totalPages - 1) {
-                currentPage++;
-                const offset = currentPage * pageHeight;
-                // 使用平滑滚动，避免跳动
-                rendition.scrollTo(offset, { animate: true });
-                updatePageInfo();
-            } else {
-                // 如果当前章节的最后一页，跳转到下一章节的第一页
-                rendition.next();
-                currentPage = 0;
-            }
+            // 使用 epub.js 的标准翻页方法，自动处理行截断
+            rendition.next();
         } catch (error) {
             console.error('下一页失败:', error);
         }
@@ -322,17 +295,9 @@ function nextPage() {
 
 // 更新页面信息
 function updatePageInfo() {
-    console.log(`当前页面: ${currentPage + 1}/${totalPages}`);
-    // 更新进度显示
-    if (totalPages > 0) {
-        const progress = (currentPage + 1) / totalPages;
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
-        if (progressBar && progressText) {
-            progressBar.style.width = (progress * 100) + '%';
-            progressText.textContent = Math.round(progress * 100) + '%';
-        }
-    }
+    // 分页模式下，进度信息由 updateProgress() 函数处理
+    // 这里可以添加其他页面相关的更新逻辑
+    console.log('页面信息已更新');
 }
 
 // 跳转到章节
@@ -381,7 +346,7 @@ function toggleSettings() {
 function showBottomMenu() {
     const bottomMenu = document.getElementById('bottomMenu');
     bottomMenu.classList.add('show');
-    
+
     // 3秒后自动隐藏
     setTimeout(() => {
         hideBottomMenu();
@@ -428,9 +393,9 @@ function showError(message) {
             <h4>解决方案:</h4>
             <ol style="text-align: left; display: inline-block;">
                 ${isFileProtocol ?
-                    '<li style="color: red; font-weight: bold;">请使用 HTTP 服务器访问，运行: <code>python3 start-server.py</code></li>' :
-                    '<li>✅ 正在通过 HTTP 服务器访问</li>'
-                }
+            '<li style="color: red; font-weight: bold;">请使用 HTTP 服务器访问，运行: <code>python3 start-server.py</code></li>' :
+            '<li>✅ 正在通过 HTTP 服务器访问</li>'
+        }
                 <li>确保 noruwei.epub 文件在同一目录下</li>
                 <li>检查浏览器控制台是否有更多错误信息</li>
                 <li>尝试刷新页面</li>
@@ -454,11 +419,11 @@ function showError(message) {
 function initializeApp() {
     // 测试库加载
     testLibraries();
-    
+
     // 监听文件导入
     const importInput = document.getElementById('importEpub');
     if (importInput) {
-        importInput.addEventListener('change', function(e) {
+        importInput.addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (file) {
                 // 检查文件类型
@@ -466,13 +431,13 @@ function initializeApp() {
                     showError('请选择本地的 EPUB 文件（File 类型）');
                     return;
                 }
-                
+
                 // 检查文件扩展名
                 if (!file.name.toLowerCase().endsWith('.epub')) {
                     showError('请选择 EPUB 格式的文件（.epub 扩展名）');
                     return;
                 }
-                
+
                 document.getElementById('loading').style.display = '';
                 document.getElementById('loading').innerHTML = '<p>正在加载电子书...</p>';
                 initReader(file);
@@ -483,7 +448,7 @@ function initializeApp() {
     // 字体切换功能
     const fontSelect = document.getElementById('fontSelect');
     if (fontSelect) {
-        fontSelect.addEventListener('change', function() {
+        fontSelect.addEventListener('change', function () {
             const viewer = document.getElementById('viewer');
             if (viewer) {
                 viewer.style.fontFamily = fontSelect.value;
@@ -494,6 +459,12 @@ function initializeApp() {
             }
         });
     }
+
+    // 页边距控制功能
+    setupMarginControls();
+    
+    // 加载保存的页边距设置
+    loadMarginSettings();
 
     // 侧边栏控制
     const closeSidebarBtn = document.getElementById('closeSidebarBtn');
@@ -510,19 +481,19 @@ function initializeApp() {
     // 阅读器区域点击事件
     const viewer = document.getElementById('viewer');
     if (viewer) {
-        viewer.addEventListener('click', function(e) {
+        viewer.addEventListener('click', function (e) {
             const clickToPageEnabled = document.getElementById('clickToPage')?.checked;
             if (!clickToPageEnabled) {
                 // 如果禁用了点击翻页，则显示菜单
-                showBottomMenu();
+                toggleBottomMenu();
                 return;
             }
-            
+
             // 点击翻页逻辑
             const rect = viewer.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const width = rect.width;
-            
+
             if (x < width / 3) {
                 prevPage();
             } else if (x > width * 2 / 3) {
@@ -535,13 +506,13 @@ function initializeApp() {
     }
 
     // 键盘快捷键
-    document.addEventListener('keydown', function(e) {
-        switch(e.key) {
+    document.addEventListener('keydown', function (e) {
+        switch (e.key) {
             case 'Escape':
                 // ESC键关闭所有面板
                 document.getElementById('sidebar').classList.remove('show');
                 document.getElementById('settingsPanel').classList.remove('show');
-                hideBottomMenu();
+                document.getElementById('bottomMenu').classList.remove('show');
                 break;
             case 'm':
             case 'M':
@@ -557,6 +528,146 @@ function initializeApp() {
     });
 }
 
+// 切换侧边栏
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('show');
+}
+
+// 切换设置面板
+function toggleSettings() {
+    const settingsPanel = document.getElementById('settingsPanel');
+    settingsPanel.classList.toggle('show');
+}
+
+// 切换底部菜单
+function toggleBottomMenu() {
+    const bottomMenu = document.getElementById('bottomMenu');
+    bottomMenu.classList.toggle('show');
+}
+
+// 设置页边距控制
+function setupMarginControls() {
+    const marginControls = [
+        { id: 'topMargin', property: 'padding-top', unit: 'px' },
+        { id: 'bottomMargin', property: 'padding-bottom', unit: 'px' },
+        { id: 'leftMargin', property: 'padding-left', unit: 'px' },
+        { id: 'rightMargin', property: 'padding-right', unit: 'px' },
+        { id: 'lineHeight', property: 'line-height', unit: '' }
+    ];
+
+    marginControls.forEach(control => {
+        const slider = document.getElementById(control.id);
+        const valueDisplay = document.getElementById(control.id + 'Value');
+        
+        if (slider && valueDisplay) {
+            // 初始化显示值
+            updateValueDisplay(slider, valueDisplay, control.unit);
+            
+            // 监听滑块变化
+            slider.addEventListener('input', function() {
+                updateValueDisplay(slider, valueDisplay, control.unit);
+                applyMarginStyle(control.property, slider.value, control.unit);
+            });
+        }
+    });
+}
+
+// 更新值显示
+function updateValueDisplay(slider, display, unit) {
+    display.textContent = slider.value + unit;
+}
+
+// 应用页边距样式
+function applyMarginStyle(property, value, unit) {
+    if (rendition) {
+        const styles = {};
+        styles[property] = value + unit;
+        
+        // 应用到epub.js的主题系统
+        rendition.themes.override(styles);
+        
+        console.log(`应用样式: ${property} = ${value}${unit}`);
+    }
+}
+
+// 重置页边距为默认值
+function resetMargins() {
+    const defaultValues = {
+        topMargin: 20,
+        bottomMargin: 20,
+        leftMargin: 30,
+        rightMargin: 30,
+        lineHeight: 1.8
+    };
+    
+    Object.keys(defaultValues).forEach(id => {
+        const slider = document.getElementById(id);
+        const valueDisplay = document.getElementById(id + 'Value');
+        
+        if (slider && valueDisplay) {
+            slider.value = defaultValues[id];
+            const unit = id === 'lineHeight' ? '' : 'px';
+            updateValueDisplay(slider, valueDisplay, unit);
+        }
+    });
+    
+    // 重新应用默认样式
+    if (rendition) {
+        rendition.themes.override({
+            'padding-top': '20px',
+            'padding-bottom': '20px',
+            'padding-left': '30px',
+            'padding-right': '30px',
+            'line-height': '1.8'
+        });
+    }
+}
+
+// 保存页边距设置到本地存储
+function saveMarginSettings() {
+    const settings = {
+        topMargin: document.getElementById('topMargin')?.value || 20,
+        bottomMargin: document.getElementById('bottomMargin')?.value || 20,
+        leftMargin: document.getElementById('leftMargin')?.value || 30,
+        rightMargin: document.getElementById('rightMargin')?.value || 30,
+        lineHeight: document.getElementById('lineHeight')?.value || 1.8
+    };
+    
+    localStorage.setItem('epubReaderMargins', JSON.stringify(settings));
+    console.log('页边距设置已保存');
+}
+
+// 从本地存储加载页边距设置
+function loadMarginSettings() {
+    try {
+        const saved = localStorage.getItem('epubReaderMargins');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            
+            Object.keys(settings).forEach(id => {
+                const slider = document.getElementById(id);
+                if (slider) {
+                    slider.value = settings[id];
+                    const valueDisplay = document.getElementById(id + 'Value');
+                    const unit = id === 'lineHeight' ? '' : 'px';
+                    if (valueDisplay) {
+                        updateValueDisplay(slider, valueDisplay, unit);
+                    }
+                }
+            });
+            
+            console.log('页边距设置已加载');
+        }
+    } catch (error) {
+        console.error('加载页边距设置失败:', error);
+    }
+}
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', initializeApp);
 window.addEventListener('load', initReader);
+
+// 页面卸载时保存设置
+window.addEventListener('beforeunload', saveMarginSettings);
+

@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ノルウェーの森 - EPUB 阅读器</title>
-    
+
     <!-- 引入样式文件 -->
     <link rel="stylesheet" href="assets/css/epub-reader.css">
 </head>
+
 <body>
     <!-- 阅读器主体容器 -->
     <div class="reader-container" id="readerContainer">
@@ -16,13 +18,13 @@
             <div class="sidebar-header">
                 <button class="close-sidebar-btn" id="closeSidebarBtn">×</button>
             </div>
-            
+
             <!-- 书本信息区域 -->
             <div class="book-info">
                 <h2 class="book-title">ノルウェーの森</h2>
                 <p class="book-subtitle">(挪威的森林)</p>
                 <p class="book-author">作者: 村上春樹</p>
-                
+
                 <!-- 文件导入 -->
                 <div class="file-import">
                     <input type="file" id="importEpub" accept=".epub" />
@@ -79,24 +81,63 @@
                 <h3>阅读设置</h3>
                 <button class="close-settings-btn" onclick="toggleSettings()">×</button>
             </div>
-            
+
             <div class="settings-body">
                 <div class="setting-item">
                     <label for="fontSelect">字体选择：</label>
                     <select id="fontSelect">
-                        <option value="IPAexMinchoWeb, IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">网页IPA明朝体（内嵌）</option>
-                        <option value="IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">IPA明朝体（系统）</option>
-                        <option value="IPAexGothic, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">IPA哥特体</option>
+                        <option
+                            value="IPAexMinchoWeb, IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">
+                            网页IPA明朝体（内嵌）</option>
+                        <option value="IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">IPA明朝体（系统）
+                        </option>
+                        <option value="IPAexGothic, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">
+                            IPA哥特体</option>
                         <option value="'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">系统明朝体</option>
                         <option value="'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">系统哥特体</option>
                         <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">默认西文字体</option>
                     </select>
                 </div>
-                
+
                 <div class="setting-item">
                     <label>
                         <input type="checkbox" id="clickToPage" checked> 点击翻页
                     </label>
+                </div>
+
+                <div class="setting-item">
+                    <label for="topMargin">上边距：</label>
+                    <input type="range" id="topMargin" min="0" max="100" value="20" step="5">
+                    <span id="topMarginValue">20px</span>
+                </div>
+
+                <div class="setting-item">
+                    <label for="bottomMargin">下边距：</label>
+                    <input type="range" id="bottomMargin" min="0" max="100" value="20" step="5">
+                    <span id="bottomMarginValue">20px</span>
+                </div>
+
+                <div class="setting-item">
+                    <label for="leftMargin">左边距：</label>
+                    <input type="range" id="leftMargin" min="0" max="100" value="30" step="5">
+                    <span id="leftMarginValue">30px</span>
+                </div>
+
+                <div class="setting-item">
+                    <label for="rightMargin">右边距：</label>
+                    <input type="range" id="rightMargin" min="0" max="100" value="30" step="5">
+                    <span id="rightMarginValue">30px</span>
+                </div>
+
+                <div class="setting-item">
+                    <label for="lineHeight">行高：</label>
+                    <input type="range" id="lineHeight" min="1.2" max="2.5" value="1.8" step="0.1">
+                    <span id="lineHeightValue">1.8</span>
+                </div>
+
+                <div class="setting-item">
+                    <button onclick="resetMargins()" class="reset-btn">重置页边距</button>
+                    <button onclick="saveMarginSettings()" class="save-btn">保存设置</button>
                 </div>
             </div>
         </div>
@@ -108,8 +149,9 @@
     <!-- 引入外部JavaScript库 -->
     <script src="assets/js/jszip.min.js"></script>
     <script src="assets/js/epub.min.js"></script>
-    
+
     <!-- 引入主要业务逻辑 -->
     <script src="assets/js/epub-reader.js"></script>
 </body>
+
 </html>

@@ -179,13 +179,29 @@ body {
 }
 
 /* 阅读器视图 */
-.viewer {
+#viewer {
     flex: 1;
     background-color: #ffffff;
     position: relative;
     font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif;
     line-height: 1.8;
     letter-spacing: 0.05em;
+    overflow: hidden; /* 防止内容溢出 */
+}
+
+/* 分页模式优化 */
+#viewer iframe {
+    border: none;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* 确保文本不会被截断 */
+#viewer * {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    orphans: 2; /* 避免孤行 */
+    widows: 2;  /* 避免寡行 */
 }
 
 /* 加载和错误状态 */
@@ -396,6 +412,78 @@ body {
 
 .setting-item input[type="checkbox"] {
     margin-right: 0.5rem;
+}
+
+/* 滑块样式 */
+.setting-item input[type="range"] {
+    width: 60%;
+    margin: 0 0.5rem;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+}
+
+.setting-item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.setting-item input[type="range"]::-webkit-slider-thumb:hover {
+    background: #764ba2;
+}
+
+.setting-item input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #667eea;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.setting-item span {
+    font-size: 0.8rem;
+    color: #666;
+    min-width: 50px;
+    display: inline-block;
+}
+
+/* 设置按钮样式 */
+.setting-item button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-right: 0.5rem;
+    transition: all 0.2s;
+}
+
+.reset-btn {
+    background: #e74c3c;
+    color: white;
+}
+
+.reset-btn:hover {
+    background: #c0392b;
+}
+
+.save-btn {
+    background: #27ae60;
+    color: white;
+}
+
+.save-btn:hover {
+    background: #229954;
 }
 
 /* 菜单唤出触发区域 */
