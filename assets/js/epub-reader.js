@@ -232,29 +232,6 @@ function setupEventListeners() {
         updateButtons();
     });
 
-    // 点击翻页（只受复选框控制）
-    rendition.on('click', (event) => {
-        const clickToPageEnabled = document.getElementById('clickToPage')?.checked;
-        if (!clickToPageEnabled) {
-            return;
-        }
-        // 检查点击的是否是正文内容区域
-        const target = event.target;
-        if (!target || target.tagName === 'HTML' || target.tagName === 'BODY') {
-            return;
-        }
-        const viewer = document.getElementById('viewer');
-        if (!viewer) return;
-        const rect = viewer.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const width = rect.width;
-        if (x < width / 2) {
-            prevPage();
-        } else {
-            nextPage();
-        }
-    });
-
     // 添加更多事件监听
     rendition.on('rendered', (section) => {
         console.log('页面渲染完成:', section);
@@ -325,10 +302,23 @@ function updateProgress() {
 function updateButtons() {
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
 
     if (currentLocation) {
-        prevBtn.disabled = currentLocation.atStart;
-        nextBtn.disabled = currentLocation.atEnd;
+        // 更新底部菜单按钮
+        if (prevBtn) prevBtn.disabled = currentLocation.atStart;
+        if (nextBtn) nextBtn.disabled = currentLocation.atEnd;
+        
+        // 更新左右翻页控件
+        if (prevPageBtn) {
+            prevPageBtn.disabled = currentLocation.atStart;
+            prevPageBtn.style.opacity = currentLocation.atStart ? '0.5' : '1';
+        }
+        if (nextPageBtn) {
+            nextPageBtn.disabled = currentLocation.atEnd;
+            nextPageBtn.style.opacity = currentLocation.atEnd ? '0.5' : '1';
+        }
     }
 }
 
@@ -513,20 +503,38 @@ function initializeApp() {
                 toggleBottomMenu();
                 return;
             }
-
-            // 点击翻页逻辑
-            const rect = viewer.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const width = rect.width;
-
-            if (x < width / 3) {
-                prevPage();
-            } else if (x > width * 2 / 3) {
-                nextPage();
-            } else {
-                // 点击中央区域显示菜单
-                toggleBottomMenu();
+            
+            // 如果启用了点击翻页，检查是否点击了翻页控件
+            const target = e.target;
+            if (target.closest('.page-control')) {
+                // 点击了翻页控件，不处理（控件有自己的事件）
+                return;
             }
+            
+            // 点击中央区域显示菜单
+            toggleBottomMenu();
+        });
+    }
+    
+    // 绑定左右翻页控件事件
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    
+    if (prevPageBtn) {
+        console.log('🔍 绑定上一页按钮事件');
+        prevPageBtn.addEventListener('click', function(e) {
+            console.log('🔍 上一页按钮被点击');
+            e.stopPropagation(); // 阻止事件冒泡
+            prevPage();
+        });
+    }
+    
+    if (nextPageBtn) {
+        console.log('🔍 绑定下一页按钮事件');
+        nextPageBtn.addEventListener('click', function(e) {
+            console.log('🔍 下一页按钮被点击');
+            e.stopPropagation(); // 阻止事件冒泡
+            nextPage();
         });
     }
 

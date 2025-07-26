@@ -534,3 +534,75 @@ body {
 .settings-panel.show {
     animation: fadeIn 0.3s ease;
 }
+
+/* 左右翻页控件样式 */
+.page-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.page-control {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #333;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    pointer-events: auto;
+}
+
+.page-control:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.page-control:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.prev-page {
+    left: 5px;
+}
+
+.next-page {
+    right: 5px;
+}
+
+.chevron-left,
+.chevron-right {
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* 响应式设计 - 在小屏幕上调整控件大小 */
+@media (max-width: 768px) {
+    .page-control {
+        width: 35px;
+        height: 60px;
+        font-size: 18px;
+    }
+    
+    .prev-page {
+        left: 2px;
+    }
+    
+    .next-page {
+        right: 2px;
+    }
+}
