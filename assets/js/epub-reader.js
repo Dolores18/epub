@@ -216,15 +216,6 @@ async function loadTOC() {
 
 // 设置事件监听器
 function setupEventListeners() {
-    // 键盘导航（始终可用）
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') {
-            prevPage();
-        } else if (e.key === 'ArrowRight') {
-            nextPage();
-        }
-    });
-
     // 位置变化监听
     rendition.on('relocated', (location) => {
         currentLocation = location;
@@ -300,16 +291,10 @@ function updateProgress() {
 
 // 更新按钮状态
 function updateButtons() {
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
     const prevPageBtn = document.getElementById('prevPageBtn');
     const nextPageBtn = document.getElementById('nextPageBtn');
 
     if (currentLocation) {
-        // 更新底部菜单按钮
-        if (prevBtn) prevBtn.disabled = currentLocation.atStart;
-        if (nextBtn) nextBtn.disabled = currentLocation.atEnd;
-        
         // 更新左右翻页控件
         if (prevPageBtn) {
             prevPageBtn.disabled = currentLocation.atStart;
@@ -341,9 +326,9 @@ function showBottomMenu() {
     console.log('🔍 bottomMenu 元素:', bottomMenu);
     bottomMenu.classList.add('show');
     console.log('🔍 菜单已显示，当前classList:', bottomMenu.classList.toString());
-    
+
     // 为菜单添加点击事件，点击菜单区域隐藏菜单
-    bottomMenu.addEventListener('click', function(e) {
+    bottomMenu.addEventListener('click', function (e) {
         console.log('🔍 bottomMenu 被点击了！');
         // 如果点击的是菜单本身（不是按钮），则隐藏菜单
         if (e.target === bottomMenu || e.target.classList.contains('menu-section')) {
@@ -468,7 +453,7 @@ function initializeApp() {
 
     // 页边距控制功能
     setupMarginControls();
-    
+
     // 加载保存的页边距设置
     loadMarginSettings();
 
@@ -483,7 +468,7 @@ function initializeApp() {
     console.log('🔍 menuTrigger 元素:', menuTrigger);
     if (menuTrigger) {
         console.log('🔍 为 menuTrigger 添加点击事件监听器');
-        menuTrigger.addEventListener('click', function(e) {
+        menuTrigger.addEventListener('click', function (e) {
             console.log('🔍 menuTrigger 被点击了！');
             console.log('🔍 事件对象:', e);
             e.stopPropagation(); // 阻止事件冒泡
@@ -497,50 +482,53 @@ function initializeApp() {
     const viewer = document.getElementById('viewer');
     if (viewer) {
         viewer.addEventListener('click', function (e) {
-            const clickToPageEnabled = document.getElementById('clickToPage')?.checked;
-            if (!clickToPageEnabled) {
-                // 如果禁用了点击翻页，则显示菜单
-                toggleBottomMenu();
-                return;
-            }
-            
-            // 如果启用了点击翻页，检查是否点击了翻页控件
+            // 检查是否点击了翻页控件
             const target = e.target;
             if (target.closest('.page-control')) {
                 // 点击了翻页控件，不处理（控件有自己的事件）
                 return;
             }
-            
+
             // 点击中央区域显示菜单
             toggleBottomMenu();
         });
     }
-    
+
     // 绑定左右翻页控件事件
     const prevPageBtn = document.getElementById('prevPageBtn');
     const nextPageBtn = document.getElementById('nextPageBtn');
-    
+
     if (prevPageBtn) {
         console.log('🔍 绑定上一页按钮事件');
-        prevPageBtn.addEventListener('click', function(e) {
+        prevPageBtn.addEventListener('click', function (e) {
             console.log('🔍 上一页按钮被点击');
             e.stopPropagation(); // 阻止事件冒泡
             prevPage();
         });
     }
-    
+
     if (nextPageBtn) {
         console.log('🔍 绑定下一页按钮事件');
-        nextPageBtn.addEventListener('click', function(e) {
+        nextPageBtn.addEventListener('click', function (e) {
             console.log('🔍 下一页按钮被点击');
             e.stopPropagation(); // 阻止事件冒泡
             nextPage();
         });
     }
 
-    // 键盘快捷键
+    // 键盘快捷键（包括基本的左右翻页）
     document.addEventListener('keydown', function (e) {
         switch (e.key) {
+            case 'ArrowLeft':
+                // 左箭头键：上一页（最基本功能，优先级最高）
+                e.preventDefault();
+                prevPage();
+                break;
+            case 'ArrowRight':
+                // 右箭头键：下一页（最基本功能，优先级最高）
+                e.preventDefault();
+                nextPage();
+                break;
             case 'Escape':
                 // ESC键关闭所有面板
                 document.getElementById('sidebar').classList.remove('show');
@@ -561,18 +549,6 @@ function initializeApp() {
     });
 }
 
-// 切换侧边栏
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('show');
-}
-
-// 切换设置面板
-function toggleSettings() {
-    const settingsPanel = document.getElementById('settingsPanel');
-    settingsPanel.classList.toggle('show');
-}
-
 // 设置页边距控制
 function setupMarginControls() {
     const marginControls = [
@@ -586,13 +562,13 @@ function setupMarginControls() {
     marginControls.forEach(control => {
         const slider = document.getElementById(control.id);
         const valueDisplay = document.getElementById(control.id + 'Value');
-        
+
         if (slider && valueDisplay) {
             // 初始化显示值
             updateValueDisplay(slider, valueDisplay, control.unit);
-            
+
             // 监听滑块变化
-            slider.addEventListener('input', function() {
+            slider.addEventListener('input', function () {
                 updateValueDisplay(slider, valueDisplay, control.unit);
                 applyMarginStyle(control.property, slider.value, control.unit);
             });
@@ -610,10 +586,10 @@ function applyMarginStyle(property, value, unit) {
     if (rendition) {
         const styles = {};
         styles[property] = value + unit;
-        
+
         // 应用到epub.js的主题系统
         rendition.themes.override(styles);
-        
+
         console.log(`应用样式: ${property} = ${value}${unit}`);
     }
 }
@@ -627,18 +603,18 @@ function resetMargins() {
         rightMargin: 30,
         lineHeight: 1.8
     };
-    
+
     Object.keys(defaultValues).forEach(id => {
         const slider = document.getElementById(id);
         const valueDisplay = document.getElementById(id + 'Value');
-        
+
         if (slider && valueDisplay) {
             slider.value = defaultValues[id];
             const unit = id === 'lineHeight' ? '' : 'px';
             updateValueDisplay(slider, valueDisplay, unit);
         }
     });
-    
+
     // 重新应用默认样式
     if (rendition) {
         rendition.themes.override({
@@ -660,7 +636,7 @@ function saveMarginSettings() {
         rightMargin: document.getElementById('rightMargin')?.value || 30,
         lineHeight: document.getElementById('lineHeight')?.value || 1.8
     };
-    
+
     localStorage.setItem('epubReaderMargins', JSON.stringify(settings));
     console.log('页边距设置已保存');
 }
@@ -671,7 +647,7 @@ function loadMarginSettings() {
         const saved = localStorage.getItem('epubReaderMargins');
         if (saved) {
             const settings = JSON.parse(saved);
-            
+
             Object.keys(settings).forEach(id => {
                 const slider = document.getElementById(id);
                 if (slider) {
@@ -683,7 +659,7 @@ function loadMarginSettings() {
                     }
                 }
             });
-            
+
             console.log('页边距设置已加载');
         }
     } catch (error) {
