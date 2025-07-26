@@ -311,12 +311,16 @@ function updateButtons() {
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     sidebar.classList.toggle('show');
+    // 打开侧边栏时自动隐藏底部菜单
+    hideBottomMenu();
 }
 
 // 切换设置面板
 function toggleSettings() {
     const settingsPanel = document.getElementById('settingsPanel');
     settingsPanel.classList.toggle('show');
+    // 打开设置面板时自动隐藏底部菜单
+    hideBottomMenu();
 }
 
 // 显示/隐藏底部菜单
