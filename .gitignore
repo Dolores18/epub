@@ -7,3 +7,4 @@ __pycache__/
 fonts/
 noruwei/
 .DS_Store
+.vscode/
