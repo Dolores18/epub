@@ -3,6 +3,8 @@
  * 完整的EPUB阅读器业务逻辑
  */
 
+console.log('🚀 EPUB Reader JavaScript 文件已加载！');
+
 // 库加载测试
 function testLibraries() {
     console.log('库加载测试:');
@@ -344,26 +346,40 @@ function toggleSettings() {
 
 // 显示/隐藏底部菜单
 function showBottomMenu() {
+    console.log('🔍 showBottomMenu() 被调用');
     const bottomMenu = document.getElementById('bottomMenu');
+    console.log('🔍 bottomMenu 元素:', bottomMenu);
     bottomMenu.classList.add('show');
-
-    // 3秒后自动隐藏
-    setTimeout(() => {
-        hideBottomMenu();
-    }, 3000);
+    console.log('🔍 菜单已显示，当前classList:', bottomMenu.classList.toString());
+    
+    // 为菜单添加点击事件，点击菜单区域隐藏菜单
+    bottomMenu.addEventListener('click', function(e) {
+        console.log('🔍 bottomMenu 被点击了！');
+        // 如果点击的是菜单本身（不是按钮），则隐藏菜单
+        if (e.target === bottomMenu || e.target.classList.contains('menu-section')) {
+            console.log('🔍 点击菜单区域，准备隐藏菜单');
+            hideBottomMenu();
+        }
+    }, { once: true }); // once: true 确保事件只绑定一次
 }
 
 function hideBottomMenu() {
+    console.log('🔍 hideBottomMenu() 被调用');
     const bottomMenu = document.getElementById('bottomMenu');
     bottomMenu.classList.remove('show');
+    console.log('🔍 菜单已隐藏，当前classList:', bottomMenu.classList.toString());
 }
 
 // 切换底部菜单显示状态
 function toggleBottomMenu() {
+    console.log('🔍 toggleBottomMenu() 被调用');
     const bottomMenu = document.getElementById('bottomMenu');
+    console.log('🔍 当前菜单状态 - 是否显示:', bottomMenu.classList.contains('show'));
     if (bottomMenu.classList.contains('show')) {
+        console.log('🔍 菜单当前显示，准备隐藏');
         hideBottomMenu();
     } else {
+        console.log('🔍 菜单当前隐藏，准备显示');
         showBottomMenu();
     }
 }
@@ -474,8 +490,17 @@ function initializeApp() {
 
     // 菜单触发区域
     const menuTrigger = document.getElementById('menuTrigger');
+    console.log('🔍 menuTrigger 元素:', menuTrigger);
     if (menuTrigger) {
-        menuTrigger.addEventListener('click', toggleBottomMenu);
+        console.log('🔍 为 menuTrigger 添加点击事件监听器');
+        menuTrigger.addEventListener('click', function(e) {
+            console.log('🔍 menuTrigger 被点击了！');
+            console.log('🔍 事件对象:', e);
+            e.stopPropagation(); // 阻止事件冒泡
+            toggleBottomMenu();
+        });
+    } else {
+        console.error('❌ 找不到 menuTrigger 元素！');
     }
 
     // 阅读器区域点击事件
@@ -538,12 +563,6 @@ function toggleSidebar() {
 function toggleSettings() {
     const settingsPanel = document.getElementById('settingsPanel');
     settingsPanel.classList.toggle('show');
-}
-
-// 切换底部菜单
-function toggleBottomMenu() {
-    const bottomMenu = document.getElementById('bottomMenu');
-    bottomMenu.classList.toggle('show');
 }
 
 // 设置页边距控制
