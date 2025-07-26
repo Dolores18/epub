@@ -9,57 +9,101 @@
     <link rel="stylesheet" href="assets/css/epub-reader.css">
 </head>
 <body>
-    <!-- 头部菜单栏 -->
-    <div class="header" id="headerBar">
-        <h1>ノルウェーの森 (挪威的森林)</h1>
-        <p>作者: 村上春樹</p>
-        <input type="file" id="importEpub" accept=".epub" style="margin-top: 1rem;" />
-        <label for="fontSelect" style="margin-left:2rem;">字体选择：</label>
-        <select id="fontSelect" style="font-size:1rem;">
-            <option value="IPAexMinchoWeb, IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">网页IPA明朝体（内嵌）</option>
-            <option value="IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">IPA明朝体（系统）</option>
-            <option value="IPAexGothic, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">IPA哥特体</option>
-            <option value="'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">系统明朝体</option>
-            <option value="'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">系统哥特体</option>
-            <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">默认西文字体</option>
-        </select>
-        <label for="clickToPage" style="margin-left:2rem;">
-            <input type="checkbox" id="clickToPage" checked> 点击翻页
-        </label>
-        <button class="hide-header-btn" id="hideHeaderBtn">隐藏菜单栏</button>
-    </div>
-    <button class="show-header-btn" id="showHeaderBtn">显示菜单栏</button>
-
-    <!-- 控制按钮栏 -->
-    <div class="controls">
-        <button id="prevBtn" onclick="prevPage()">← 上一页</button>
-        <button id="nextBtn" onclick="nextPage()">下一页 →</button>
-        <button onclick="toggleSidebar()">目录</button>
-        <button onclick="changeFontSize(-1)">字体 -</button>
-        <button onclick="changeFontSize(1)">字体 +</button>
-
-        <div class="progress">
-            <div class="progress-bar" id="progressBar"></div>
-        </div>
-        <span id="progressText">0%</span>
-    </div>
-
-    <!-- 阅读器主体 -->
+    <!-- 阅读器主体容器 -->
     <div class="reader-container" id="readerContainer">
-        <!-- 侧边栏目录 -->
-        <div class="sidebar" id="sidebar">
-            <button class="hide-sidebar-btn" id="hideSidebarBtn">收起目录</button>
-            <h3>目录</h3>
-            <div id="toc"></div>
+        <!-- 侧边栏：书本信息 + 目录 -->
+        <div class="sidebar" id="sidebar" class="hidden">
+            <div class="sidebar-header">
+                <button class="close-sidebar-btn" id="closeSidebarBtn">×</button>
+            </div>
+            
+            <!-- 书本信息区域 -->
+            <div class="book-info">
+                <h2 class="book-title">ノルウェーの森</h2>
+                <p class="book-subtitle">(挪威的森林)</p>
+                <p class="book-author">作者: 村上春樹</p>
+                
+                <!-- 文件导入 -->
+                <div class="file-import">
+                    <input type="file" id="importEpub" accept=".epub" />
+                    <label for="importEpub" class="import-btn">📁 选择EPUB文件</label>
+                </div>
+            </div>
+
+            <!-- 目录区域 -->
+            <div class="toc-section">
+                <h3>目录</h3>
+                <div id="toc" class="toc-list"></div>
+            </div>
         </div>
 
         <!-- 阅读器视图 -->
-        <div id="viewer">
+        <div id="viewer" class="viewer">
             <div class="loading" id="loading">
                 <p>正在加载电子书...</p>
             </div>
         </div>
     </div>
+
+    <!-- 底部控制菜单栏（默认隐藏） -->
+    <div class="bottom-menu" id="bottomMenu">
+        <div class="menu-section">
+            <!-- 导航控制 -->
+            <div class="nav-controls">
+                <button id="prevBtn" onclick="prevPage()" title="上一页">⬅️</button>
+                <button id="nextBtn" onclick="nextPage()" title="下一页">➡️</button>
+            </div>
+
+            <!-- 进度显示 -->
+            <div class="progress-section">
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <span id="progressText">0%</span>
+            </div>
+
+            <!-- 功能控制 -->
+            <div class="function-controls">
+                <button onclick="toggleSidebar()" title="目录">📚</button>
+                <button onclick="changeFontSize(-1)" title="字体缩小">A-</button>
+                <button onclick="changeFontSize(1)" title="字体放大">A+</button>
+                <button onclick="toggleSettings()" title="设置">⚙️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置面板（默认隐藏） -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h3>阅读设置</h3>
+                <button class="close-settings-btn" onclick="toggleSettings()">×</button>
+            </div>
+            
+            <div class="settings-body">
+                <div class="setting-item">
+                    <label for="fontSelect">字体选择：</label>
+                    <select id="fontSelect">
+                        <option value="IPAexMinchoWeb, IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">网页IPA明朝体（内嵌）</option>
+                        <option value="IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">IPA明朝体（系统）</option>
+                        <option value="IPAexGothic, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">IPA哥特体</option>
+                        <option value="'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">系统明朝体</option>
+                        <option value="'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">系统哥特体</option>
+                        <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">默认西文字体</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="clickToPage" checked> 点击翻页
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 菜单唤出按钮（点击屏幕中央下方显示） -->
+    <div class="menu-trigger" id="menuTrigger"></div>
 
     <!-- 引入外部JavaScript库 -->
     <script src="assets/js/jszip.min.js"></script>

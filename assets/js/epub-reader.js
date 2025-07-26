@@ -368,7 +368,39 @@ function updateButtons() {
 // 切换侧边栏
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+    sidebar.classList.toggle('show');
+}
+
+// 切换设置面板
+function toggleSettings() {
+    const settingsPanel = document.getElementById('settingsPanel');
+    settingsPanel.classList.toggle('show');
+}
+
+// 显示/隐藏底部菜单
+function showBottomMenu() {
+    const bottomMenu = document.getElementById('bottomMenu');
+    bottomMenu.classList.add('show');
+    
+    // 3秒后自动隐藏
+    setTimeout(() => {
+        hideBottomMenu();
+    }, 3000);
+}
+
+function hideBottomMenu() {
+    const bottomMenu = document.getElementById('bottomMenu');
+    bottomMenu.classList.remove('show');
+}
+
+// 切换底部菜单显示状态
+function toggleBottomMenu() {
+    const bottomMenu = document.getElementById('bottomMenu');
+    if (bottomMenu.classList.contains('show')) {
+        hideBottomMenu();
+    } else {
+        showBottomMenu();
+    }
 }
 
 // 改变字体大小
@@ -463,31 +495,66 @@ function initializeApp() {
         });
     }
 
-    // 目录隐藏/显示
-    const sidebar = document.getElementById('sidebar');
-    const readerContainer = document.getElementById('readerContainer');
-    const hideSidebarBtn = document.getElementById('hideSidebarBtn');
-    if (hideSidebarBtn) {
-        hideSidebarBtn.addEventListener('click', function() {
-            sidebar.classList.add('hidden');
-            readerContainer.classList.add('fullwidth');
+    // 侧边栏控制
+    const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+    if (closeSidebarBtn) {
+        closeSidebarBtn.addEventListener('click', toggleSidebar);
+    }
+
+    // 菜单触发区域
+    const menuTrigger = document.getElementById('menuTrigger');
+    if (menuTrigger) {
+        menuTrigger.addEventListener('click', toggleBottomMenu);
+    }
+
+    // 阅读器区域点击事件
+    const viewer = document.getElementById('viewer');
+    if (viewer) {
+        viewer.addEventListener('click', function(e) {
+            const clickToPageEnabled = document.getElementById('clickToPage')?.checked;
+            if (!clickToPageEnabled) {
+                // 如果禁用了点击翻页，则显示菜单
+                showBottomMenu();
+                return;
+            }
+            
+            // 点击翻页逻辑
+            const rect = viewer.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const width = rect.width;
+            
+            if (x < width / 3) {
+                prevPage();
+            } else if (x > width * 2 / 3) {
+                nextPage();
+            } else {
+                // 点击中央区域显示菜单
+                toggleBottomMenu();
+            }
         });
     }
 
-    // 菜单栏隐藏/显示
-    const headerBar = document.getElementById('headerBar');
-    const hideHeaderBtn = document.getElementById('hideHeaderBtn');
-    const showHeaderBtn = document.getElementById('showHeaderBtn');
-    if (hideHeaderBtn && showHeaderBtn) {
-        hideHeaderBtn.addEventListener('click', function() {
-            headerBar.style.display = 'none';
-            showHeaderBtn.style.display = 'block';
-        });
-        showHeaderBtn.addEventListener('click', function() {
-            headerBar.style.display = '';
-            showHeaderBtn.style.display = 'none';
-        });
-    }
+    // 键盘快捷键
+    document.addEventListener('keydown', function(e) {
+        switch(e.key) {
+            case 'Escape':
+                // ESC键关闭所有面板
+                document.getElementById('sidebar').classList.remove('show');
+                document.getElementById('settingsPanel').classList.remove('show');
+                hideBottomMenu();
+                break;
+            case 'm':
+            case 'M':
+                // M键切换菜单
+                toggleBottomMenu();
+                break;
+            case 't':
+            case 'T':
+                // T键切换目录
+                toggleSidebar();
+                break;
+        }
+    });
 }
 
 // 页面加载完成后初始化
