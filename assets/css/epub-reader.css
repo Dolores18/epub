@@ -9,9 +9,10 @@
 body {
     margin: 0;
     padding: 0;
-    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif;
     background-color: #fafafa;
-    overflow: hidden; /* 防止滚动条 */
+    overflow: hidden;
+    /* 防止滚动条 */
 }
 
 /* 定义日文字体 */
@@ -183,10 +184,20 @@ body {
     flex: 1;
     background-color: #ffffff;
     position: relative;
-    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif;
+    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif !important;
     line-height: 1.8;
     letter-spacing: 0.05em;
-    overflow: hidden; /* 防止内容溢出 */
+    overflow: hidden;
+    /* 防止内容溢出 */
+}
+
+/* 强制覆盖epub内容的字体 */
+#viewer * {
+    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif !important;
+}
+
+#viewer iframe {
+    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif !important;
 }
 
 /* 分页模式优化 */
@@ -200,8 +211,10 @@ body {
 #viewer * {
     page-break-inside: avoid;
     break-inside: avoid;
-    orphans: 2; /* 避免孤行 */
-    widows: 2;  /* 避免寡行 */
+    orphans: 2;
+    /* 避免孤行 */
+    widows: 2;
+    /* 避免寡行 */
 }
 
 /* 加载和错误状态 */
@@ -477,21 +490,21 @@ body {
     .sidebar {
         width: 280px;
     }
-    
+
     .menu-section {
         flex-direction: column;
         gap: 1rem;
     }
-    
+
     .progress-section {
         margin: 0;
         order: -1;
     }
-    
+
     .function-controls {
         justify-content: center;
     }
-    
+
     .settings-panel {
         width: 100%;
     }
@@ -499,8 +512,13 @@ body {
 
 /* 动画效果 */
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .sidebar.show,
@@ -571,15 +589,16 @@ body {
         height: 60px;
         font-size: 18px;
     }
-    
+
     .prev-page {
         left: 2px;
     }
-    
+
     .next-page {
         right: 2px;
     }
 }
+
 /* 词典按钮
 样式 */
 #dictToggleBtn {

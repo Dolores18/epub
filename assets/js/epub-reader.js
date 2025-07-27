@@ -113,19 +113,42 @@ async function initReader(file = null) {
                 manager: 'default'  // 使用默认管理器
             });
 
-            // 设置日文字体主题
-            rendition.themes.default({
-                'body': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif',
-                    'line-height': '1.8',
-                    'letter-spacing': '0.05em',
-                    'font-size': '16px'
-                }
-            });
-
             // 显示第一章
             debugLog('显示第一章...');
             await rendition.display();
+
+            // 在渲染完成后立即设置字体主题（确保覆盖EPUB内部样式）
+            debugLog('设置日文字体主题...');
+            rendition.themes.default({
+                'body': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important',
+                    'line-height': '1.8',
+                    'letter-spacing': '0.05em',
+                    'font-size': '16px'
+                },
+                '*': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                }
+            });
+
+            // 强制覆盖epub中可能存在的不合适字体设置
+            rendition.themes.override({
+                'body': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                },
+                '*': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                },
+                '.calibre': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                },
+                'p': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                },
+                'div': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                }
+            });
             debugLog('第一章显示成功');
 
             // 将rendition设置为全局变量，供词典功能使用
@@ -247,6 +270,24 @@ function setupEventListeners() {
     // 添加更多事件监听
     rendition.on('rendered', (section) => {
         console.log('页面渲染完成:', section);
+        
+        // 每次页面渲染完成后，强制重新应用字体设置
+        setTimeout(() => {
+            rendition.themes.override({
+                'body': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                },
+                '*': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                },
+                'p': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                },
+                'div': {
+                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
+                }
+            });
+        }, 100); // 延迟100ms确保DOM完全渲染
     });
 
     rendition.on('layout', (layout) => {
