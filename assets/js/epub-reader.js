@@ -43,6 +43,79 @@ let currentPage = 0;  // 当前页面索引
 let totalPages = 0;   // 总页数
 let pageHeight = 0;   // 页面高度
 
+// 根据语言获取字体设置
+function getFontFamilyByLanguage(language) {
+    debugLog('检测到的语言:', language);
+
+    if (!language) {
+        debugLog('未检测到语言，使用系统默认字体');
+        return null; // 不设置字体，使用系统默认
+    }
+
+    // 标准化语言代码
+    const lang = language.toLowerCase();
+
+    if (lang === 'ja' || lang === 'jp' || lang === 'japanese' || lang.startsWith('ja-')) {
+        debugLog('检测到日文，使用明朝体');
+        return 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif';
+    } else if (lang === 'zh' || lang === 'zh-cn' || lang === 'zh-tw' || lang === 'chinese' || lang.startsWith('zh-')) {
+        debugLog('检测到中文，使用中文字体');
+        return 'SimSun, "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif';
+    } else if (lang === 'ko' || lang === 'korean' || lang.startsWith('ko-')) {
+        debugLog('检测到韩文，使用韩文字体');
+        return 'Batang, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+    } else {
+        debugLog('检测到其他语言，使用系统默认字体');
+        return null; // 不设置字体，使用系统默认
+    }
+}
+
+// 应用基于语言的字体设置
+function applyLanguageBasedFont(language) {
+    const fontFamily = getFontFamilyByLanguage(language);
+
+    if (!fontFamily) {
+        debugLog('不设置字体，使用系统默认渲染');
+        // 清除之前可能设置的字体覆盖
+        rendition.themes.override({
+            'body': { 'font-family': '' },
+            '*': { 'font-family': '' }
+        });
+        return;
+    }
+
+    debugLog('应用字体:', fontFamily);
+
+    // 设置默认主题
+    rendition.themes.default({
+        'body': {
+            'font-family': fontFamily + ' !important',
+            'line-height': '1.8',
+            'letter-spacing': '0.05em',
+            'font-size': '16px'
+        }
+    });
+
+    // 强制覆盖epub中可能存在的不合适字体设置
+    rendition.themes.override({
+        'body': {
+            'font-family': fontFamily + ' !important'
+        },
+        '*': {
+            'font-family': fontFamily + ' !important'
+        },
+        '.calibre': {
+            'font-family': fontFamily + ' !important'
+        },
+        'p': {
+            'font-family': fontFamily + ' !important'
+        },
+        'div': {
+            'font-family': fontFamily + ' !important'
+        }
+    });
+}
+
 // 添加调试日志
 function debugLog(message, data = null) {
     console.log(`[EPUB Reader] ${message}`, data || '');
@@ -117,38 +190,28 @@ async function initReader(file = null) {
             debugLog('显示第一章...');
             await rendition.display();
 
-            // 在渲染完成后立即设置字体主题（确保覆盖EPUB内部样式）
-            debugLog('设置日文字体主题...');
-            rendition.themes.default({
-                'body': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important',
-                    'line-height': '1.8',
-                    'letter-spacing': '0.05em',
-                    'font-size': '16px'
-                },
-                '*': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                }
-            });
+            // 尝试获取语言信息并设置相应字体
+            debugLog('获取EPUB语言信息...');
+            try {
+                // 等待metadata加载完成
+                await book.ready;
+                const metadata = book.package.metadata;
+                const language = metadata.language;
 
-            // 强制覆盖epub中可能存在的不合适字体设置
-            rendition.themes.override({
-                'body': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                },
-                '*': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                },
-                '.calibre': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                },
-                'p': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                },
-                'div': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                }
-            });
+                debugLog('EPUB元数据:', metadata);
+                debugLog('检测到的语言:', language);
+
+                // 显示详细的元数据信息
+                showEpubMetadata();
+
+                // 根据语言设置字体
+                applyLanguageBasedFont(language);
+
+            } catch (metadataError) {
+                debugLog('获取语言信息失败，使用默认设置:', metadataError.message);
+                // 如果无法获取语言信息，不设置特定字体，使用系统默认
+                debugLog('使用系统默认字体渲染');
+            }
             debugLog('第一章显示成功');
 
             // 将rendition设置为全局变量，供词典功能使用
@@ -258,6 +321,32 @@ async function loadTOC() {
     }
 }
 
+// 调试函数：显示EPUB元数据信息
+function showEpubMetadata() {
+    if (book && book.package && book.package.metadata) {
+        const metadata = book.package.metadata;
+        console.log('📚 EPUB元数据信息:');
+        console.log('  标题:', metadata.title);
+        console.log('  作者:', metadata.creator);
+        console.log('  语言:', metadata.language);
+        console.log('  出版商:', metadata.publisher);
+        console.log('  标识符:', metadata.identifier);
+        console.log('  完整元数据:', metadata);
+
+        // 在页面上也显示语言信息
+        const loading = document.getElementById('loading');
+        if (loading && loading.style.display !== 'none') {
+            loading.innerHTML = `
+                <p>正在加载电子书...</p>
+                <p style="font-size: 12px; color: #666;">
+                    检测到语言: ${metadata.language || '未知'}<br>
+                    应用字体: ${getFontFamilyByLanguage(metadata.language) || '系统默认'}
+                </p>
+            `;
+        }
+    }
+}
+
 // 设置事件监听器
 function setupEventListeners() {
     // 位置变化监听
@@ -270,23 +359,13 @@ function setupEventListeners() {
     // 添加更多事件监听
     rendition.on('rendered', (section) => {
         console.log('页面渲染完成:', section);
-        
-        // 每次页面渲染完成后，强制重新应用字体设置
+
+        // 每次页面渲染完成后，重新应用基于语言的字体设置
         setTimeout(() => {
-            rendition.themes.override({
-                'body': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                },
-                '*': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                },
-                'p': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                },
-                'div': {
-                    'font-family': 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif !important'
-                }
-            });
+            if (book && book.package && book.package.metadata) {
+                const language = book.package.metadata.language;
+                applyLanguageBasedFont(language);
+            }
         }, 100); // 延迟100ms确保DOM完全渲染
     });
 
@@ -406,7 +485,7 @@ function hideBottomMenu() {
     const bottomMenu = document.getElementById('bottomMenu');
     bottomMenu.classList.remove('show');
     console.log('🔍 菜单已隐藏，当前classList:', bottomMenu.classList.toString());
-    
+
     // 移除全局点击监听器
     document.removeEventListener('click', handleGlobalClick);
     // 移除epub点击监听器
@@ -416,13 +495,13 @@ function hideBottomMenu() {
 // 处理全局点击事件
 function handleGlobalClick(e) {
     const bottomMenu = document.getElementById('bottomMenu');
-    
+
     // 如果菜单不存在或已隐藏，移除监听器
     if (!bottomMenu || !bottomMenu.classList.contains('show')) {
         document.removeEventListener('click', handleGlobalClick);
         return;
     }
-    
+
     // 检查点击目标是否在菜单内
     if (!bottomMenu.contains(e.target)) {
         console.log('🔍 点击主文档空白区域，隐藏菜单');
@@ -441,48 +520,48 @@ function bindEpubClickListener() {
         console.warn('⚠️ rendition未初始化，无法绑定epub点击监听器');
         return;
     }
-    
+
     try {
         console.log('🔍 使用epub.js官方API绑定点击事件');
-        
+
         // 使用epub.js的官方API监听链接点击事件
-        window.rendition.on('linkClicked', function(href) {
+        window.rendition.on('linkClicked', function (href) {
             console.log('🔍 epub链接被点击:', href);
             hideBottomMenu();
         });
-        
+
         // 监听文本选择事件（用户点击文本时也会触发）
-        window.rendition.on('selected', function(cfiRange, contents) {
+        window.rendition.on('selected', function (cfiRange, contents) {
             console.log('🔍 epub文本被选择/点击');
             hideBottomMenu();
         });
-        
+
         // 尝试监听更通用的内容点击事件
         // 通过监听contents的点击事件
-        window.rendition.on('rendered', function(section, view) {
+        window.rendition.on('rendered', function (section, view) {
             if (view.contents) {
                 console.log('🔍 为新渲染的内容绑定点击监听器');
-                view.contents.document.addEventListener('click', function(event) {
+                view.contents.document.addEventListener('click', function (event) {
                     console.log('🔍 epub内容被点击，隐藏菜单');
                     hideBottomMenu();
                 }, true); // 使用捕获阶段，避免被epub.js拦截
             }
         });
-        
+
         // 为已存在的视图绑定点击事件
         if (window.rendition.manager) {
             const views = window.rendition.manager.views();
             views.forEach((view, index) => {
                 if (view.contents) {
                     console.log(`🔍 为现有视图${index}绑定点击监听器`);
-                    view.contents.document.addEventListener('click', function(event) {
+                    view.contents.document.addEventListener('click', function (event) {
                         console.log('🔍 epub内容被点击，隐藏菜单');
                         hideBottomMenu();
                     }, true); // 使用捕获阶段
                 }
             });
         }
-        
+
     } catch (error) {
         console.error('❌ 绑定epub点击监听器失败:', error);
     }
@@ -493,20 +572,20 @@ function unbindEpubClickListener() {
     if (!window.rendition) {
         return;
     }
-    
+
     try {
         console.log('🔍 解绑epub点击监听器');
-        
+
         // 移除epub.js官方事件监听器
         window.rendition.off('linkClicked');
         window.rendition.off('selected');
         window.rendition.off('rendered');
-        
+
         // 注意：由于addEventListener是在rendered事件中动态添加的，
         // 这里无法直接移除，但当菜单隐藏后，点击处理器会检查菜单状态
-        
+
         epubClickHandler = null;
-        
+
     } catch (error) {
         console.error('❌ 解绑epub点击监听器失败:', error);
     }
@@ -615,13 +694,27 @@ function initializeApp() {
     const fontSelect = document.getElementById('fontSelect');
     if (fontSelect) {
         fontSelect.addEventListener('change', function () {
-            const viewer = document.getElementById('viewer');
-            if (viewer) {
-                viewer.style.fontFamily = fontSelect.value;
-            }
-            // epub.js 内部内容也同步切换
-            if (rendition) {
-                rendition.themes.override('font-family', fontSelect.value);
+            const selectedFont = fontSelect.value;
+
+            if (selectedFont === 'auto') {
+                // 自动模式：根据语言选择字体
+                if (book && book.package && book.package.metadata) {
+                    const language = book.package.metadata.language;
+                    applyLanguageBasedFont(language);
+                }
+            } else {
+                // 手动模式：使用用户选择的字体
+                const viewer = document.getElementById('viewer');
+                if (viewer) {
+                    viewer.style.fontFamily = selectedFont;
+                }
+                // epub.js 内部内容也同步切换
+                if (rendition) {
+                    rendition.themes.override({
+                        'body': { 'font-family': selectedFont + ' !important' },
+                        '*': { 'font-family': selectedFont + ' !important' }
+                    });
+                }
             }
         });
     }
@@ -646,7 +739,7 @@ function initializeApp() {
         menuTrigger.addEventListener('click', function (e) {
             console.log('🔍 menuTrigger 被点击了！');
             e.stopPropagation(); // 阻止事件冒泡
-            
+
             // 只在菜单隐藏时显示
             const bottomMenu = document.getElementById('bottomMenu');
             if (!bottomMenu.classList.contains('show')) {

@@ -749,7 +749,7 @@ async function fetchOnlineDictionary(word) {
         console.log('🔍 查询在线词典:', word);
 
         // 使用提供的日语词典API
-        const response = await fetch(`https://dict.3049589.xyz/api/japanese/definition?word=${encodeURIComponent(word)}`);
+        const response = await fetch(`https://language.3049589.xyz/api/japanese/${encodeURIComponent(word)}?definition`);
         const data = await response.json();
 
         console.log('📚 API响应:', data);
@@ -965,9 +965,9 @@ function showQueryButton(selection, contents) {
         queryBtn.innerHTML = '🔍 查询选中文本';
         queryBtn.style.cssText = `
             position: fixed;
-            top: 20px;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
             background: #667eea;
             color: white;
             border: none;
@@ -1015,12 +1015,12 @@ function showQueryButton(selection, contents) {
         // 鼠标悬停效果
         queryBtn.onmouseenter = function () {
             this.style.background = '#5a6fd8';
-            this.style.transform = 'translateX(-50%) scale(1.05)';
+            this.style.transform = 'translate(-50%, -50%) scale(1.05)';
         };
 
         queryBtn.onmouseleave = function () {
             this.style.background = '#667eea';
-            this.style.transform = 'translateX(-50%) scale(1)';
+            this.style.transform = 'translate(-50%, -50%) scale(1)';
         };
 
         document.body.appendChild(queryBtn);

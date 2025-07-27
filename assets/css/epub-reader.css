@@ -9,7 +9,7 @@
 body {
     margin: 0;
     padding: 0;
-    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif;
+    /* 不设置默认字体，让JavaScript根据语言动态设置 */
     background-color: #fafafa;
     overflow: hidden;
     /* 防止滚动条 */
@@ -184,20 +184,11 @@ body {
     flex: 1;
     background-color: #ffffff;
     position: relative;
-    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif !important;
+    /* 不设置默认字体，让JavaScript根据语言动态设置 */
     line-height: 1.8;
     letter-spacing: 0.05em;
     overflow: hidden;
     /* 防止内容溢出 */
-}
-
-/* 强制覆盖epub内容的字体 */
-#viewer * {
-    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif !important;
-}
-
-#viewer iframe {
-    font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif !important;
 }
 
 /* 分页模式优化 */
