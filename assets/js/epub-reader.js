@@ -885,7 +885,7 @@ function applyMarginStyle(property, value, unit) {
 function resetMargins() {
     const defaultValues = {
         topMargin: 20,
-        bottomMargin: 20,
+        bottomMargin: 30,
         leftMargin: 30,
         rightMargin: 30,
         lineHeight: 1.8
@@ -906,7 +906,7 @@ function resetMargins() {
     if (rendition) {
         rendition.themes.override({
             'padding-top': '20px',
-            'padding-bottom': '20px',
+            'padding-bottom': '30px',
             'padding-left': '30px',
             'padding-right': '30px',
             'line-height': '1.8'
@@ -918,7 +918,7 @@ function resetMargins() {
 function saveMarginSettings() {
     const settings = {
         topMargin: document.getElementById('topMargin')?.value || 20,
-        bottomMargin: document.getElementById('bottomMargin')?.value || 20,
+        bottomMargin: document.getElementById('bottomMargin')?.value || 30,
         leftMargin: document.getElementById('leftMargin')?.value || 30,
         rightMargin: document.getElementById('rightMargin')?.value || 30,
         lineHeight: document.getElementById('lineHeight')?.value || 1.8

@@ -8,11 +8,11 @@
 
     <!-- 引入样式文件 -->
     <link rel="stylesheet" href="assets/css/epub-reader.css">
-    
+
     <!-- 引入JavaScript库 -->
     <script src="assets/js/jszip.min.js"></script>
     <script src="assets/js/epub.min.js"></script>
-    
+
     <!-- 引入词典功能 -->
     <script src="assets/js/dictionary.js"></script>
 </head>
@@ -51,7 +51,7 @@
             <div class="loading" id="loading">
                 <p>正在加载电子书...</p>
             </div>
-            
+
             <!-- 左右翻页控件 -->
             <div class="page-controls">
                 <button class="page-control prev-page" id="prevPageBtn" title="上一页">
@@ -60,6 +60,10 @@
                 <button class="page-control next-page" id="nextPageBtn" title="下一页">
                     <span class="chevron-right">›</span>
                 </button>
+            </div>
+            <!-- 菜单唤出按钮（右下角圆形按钮） -->
+            <div class="menu-trigger" id="menuTrigger">
+                <span>☰</span>
             </div>
         </div>
     </div>
@@ -129,8 +133,8 @@
 
                 <div class="setting-item">
                     <label for="bottomMargin">下边距：</label>
-                    <input type="range" id="bottomMargin" min="0" max="100" value="20" step="5">
-                    <span id="bottomMarginValue">20px</span>
+                    <input type="range" id="bottomMargin" min="0" max="100" value="30" step="5">
+                    <span id="bottomMarginValue">30px</span>
                 </div>
 
                 <div class="setting-item">
@@ -158,9 +162,6 @@
             </div>
         </div>
     </div>
-
-    <!-- 菜单唤出按钮（点击屏幕中央下方显示） -->
-    <div class="menu-trigger" id="menuTrigger"></div>
 
     <!-- 引入外部JavaScript库 -->
     <script src="assets/js/jszip.min.js"></script>
