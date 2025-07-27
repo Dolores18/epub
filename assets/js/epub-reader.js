@@ -352,15 +352,12 @@ function showBottomMenu() {
     bottomMenu.classList.add('show');
     console.log('🔍 菜单已显示，当前classList:', bottomMenu.classList.toString());
 
-    // 为菜单添加点击事件，点击菜单区域隐藏菜单
-    bottomMenu.addEventListener('click', function (e) {
-        console.log('🔍 bottomMenu 被点击了！');
-        // 如果点击的是菜单本身（不是按钮），则隐藏菜单
-        if (e.target === bottomMenu || e.target.classList.contains('menu-section')) {
-            console.log('🔍 点击菜单区域，准备隐藏菜单');
-            hideBottomMenu();
-        }
-    }, { once: true }); // once: true 确保事件只绑定一次
+    // 添加全局点击监听器，点击空白区域隐藏菜单
+    setTimeout(() => {
+        document.addEventListener('click', handleGlobalClick);
+        // 同时监听epub内容区域的点击
+        bindEpubClickListener();
+    }, 0);
 }
 
 function hideBottomMenu() {
@@ -368,6 +365,110 @@ function hideBottomMenu() {
     const bottomMenu = document.getElementById('bottomMenu');
     bottomMenu.classList.remove('show');
     console.log('🔍 菜单已隐藏，当前classList:', bottomMenu.classList.toString());
+    
+    // 移除全局点击监听器
+    document.removeEventListener('click', handleGlobalClick);
+    // 移除epub点击监听器
+    unbindEpubClickListener();
+}
+
+// 处理全局点击事件
+function handleGlobalClick(e) {
+    const bottomMenu = document.getElementById('bottomMenu');
+    
+    // 如果菜单不存在或已隐藏，移除监听器
+    if (!bottomMenu || !bottomMenu.classList.contains('show')) {
+        document.removeEventListener('click', handleGlobalClick);
+        return;
+    }
+    
+    // 检查点击目标是否在菜单内
+    if (!bottomMenu.contains(e.target)) {
+        console.log('🔍 点击主文档空白区域，隐藏菜单');
+        hideBottomMenu();
+    } else {
+        console.log('🔍 点击菜单内部，保持显示');
+    }
+}
+
+// epub点击事件处理器
+let epubClickHandler = null;
+
+// 绑定epub内容区域的点击监听器
+function bindEpubClickListener() {
+    if (!window.rendition) {
+        console.warn('⚠️ rendition未初始化，无法绑定epub点击监听器');
+        return;
+    }
+    
+    try {
+        console.log('🔍 使用epub.js官方API绑定点击事件');
+        
+        // 使用epub.js的官方API监听链接点击事件
+        window.rendition.on('linkClicked', function(href) {
+            console.log('🔍 epub链接被点击:', href);
+            hideBottomMenu();
+        });
+        
+        // 监听文本选择事件（用户点击文本时也会触发）
+        window.rendition.on('selected', function(cfiRange, contents) {
+            console.log('🔍 epub文本被选择/点击');
+            hideBottomMenu();
+        });
+        
+        // 尝试监听更通用的内容点击事件
+        // 通过监听contents的点击事件
+        window.rendition.on('rendered', function(section, view) {
+            if (view.contents) {
+                console.log('🔍 为新渲染的内容绑定点击监听器');
+                view.contents.document.addEventListener('click', function(event) {
+                    console.log('🔍 epub内容被点击，隐藏菜单');
+                    hideBottomMenu();
+                }, true); // 使用捕获阶段，避免被epub.js拦截
+            }
+        });
+        
+        // 为已存在的视图绑定点击事件
+        if (window.rendition.manager) {
+            const views = window.rendition.manager.views();
+            views.forEach((view, index) => {
+                if (view.contents) {
+                    console.log(`🔍 为现有视图${index}绑定点击监听器`);
+                    view.contents.document.addEventListener('click', function(event) {
+                        console.log('🔍 epub内容被点击，隐藏菜单');
+                        hideBottomMenu();
+                    }, true); // 使用捕获阶段
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ 绑定epub点击监听器失败:', error);
+    }
+}
+
+// 解绑epub内容区域的点击监听器
+function unbindEpubClickListener() {
+    if (!window.rendition) {
+        return;
+    }
+    
+    try {
+        console.log('🔍 解绑epub点击监听器');
+        
+        // 移除epub.js官方事件监听器
+        window.rendition.off('linkClicked');
+        window.rendition.off('selected');
+        window.rendition.off('rendered');
+        
+        // 注意：由于addEventListener是在rendered事件中动态添加的，
+        // 这里无法直接移除，但当菜单隐藏后，点击处理器会检查菜单状态
+        
+        epubClickHandler = null;
+        
+    } catch (error) {
+        console.error('❌ 解绑epub点击监听器失败:', error);
+    }
 }
 
 // 切换底部菜单显示状态
@@ -503,9 +604,14 @@ function initializeApp() {
         console.log('🔍 为 menuTrigger 添加点击事件监听器');
         menuTrigger.addEventListener('click', function (e) {
             console.log('🔍 menuTrigger 被点击了！');
-            console.log('🔍 事件对象:', e);
             e.stopPropagation(); // 阻止事件冒泡
-            toggleBottomMenu();
+            
+            // 只在菜单隐藏时显示
+            const bottomMenu = document.getElementById('bottomMenu');
+            if (!bottomMenu.classList.contains('show')) {
+                console.log('🔍 显示菜单');
+                showBottomMenu();
+            }
         });
     } else {
         console.error('❌ 找不到 menuTrigger 元素！');
@@ -522,8 +628,12 @@ function initializeApp() {
                 return;
             }
 
-            // 点击中央区域显示菜单
-            toggleBottomMenu();
+            // 点击中央区域显示菜单（只在菜单隐藏时显示）
+            const bottomMenu = document.getElementById('bottomMenu');
+            if (!bottomMenu.classList.contains('show')) {
+                console.log('🔍 点击阅读区域，显示菜单');
+                showBottomMenu();
+            }
         });
     }
 
