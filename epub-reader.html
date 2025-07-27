@@ -8,6 +8,13 @@
 
     <!-- 引入样式文件 -->
     <link rel="stylesheet" href="assets/css/epub-reader.css">
+    
+    <!-- 引入JavaScript库 -->
+    <script src="assets/js/jszip.min.js"></script>
+    <script src="assets/js/epub.min.js"></script>
+    
+    <!-- 引入词典功能 -->
+    <script src="assets/js/dictionary.js"></script>
 </head>
 
 <body>
@@ -71,6 +78,12 @@
             <!-- 功能控制 -->
             <div class="function-controls">
                 <button onclick="toggleSidebar()" title="目录">📚</button>
+                <button id="dictToggleBtn" onclick="Dictionary.toggle()" title="词典功能">
+                    <svg class="dict-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 4h2v5l-1-.75L9 9V4zm9 16H6V4h1v9l3-2.25L13 13V4h5v16z"/>
+                        <path d="M8 15h8v1H8zm0-2h8v1H8zm0-2h5v1H8z"/>
+                    </svg>
+                </button>
                 <button onclick="changeFontSize(-1)" title="字体缩小">A-</button>
                 <button onclick="changeFontSize(1)" title="字体放大">A+</button>
                 <button onclick="toggleSettings()" title="设置">⚙️</button>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>词典功能测试</title>
+    <style>
+        body {
+            font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif;
+            line-height: 1.8;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-content {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .test-text {
+            font-size: 18px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-buttons {
+            margin: 20px 0;
+        }
+        .test-buttons button {
+            margin: 5px;
+            padding: 10px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .test-buttons button:hover {
+            background: #5a6fd8;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-content">
+        <h1>📚 日语词典功能测试</h1>
+        
+        <div class="instructions">
+            <h3>测试说明：</h3>
+            <ul>
+                <li>选中下面的日语文本，词典面板会自动显示查询结果</li>
+                <li>点击右上角的📚按钮打开词典面板</li>
+                <li>在搜索框中输入日语单词进行查询</li>
+                <li>使用快捷键 D 切换词典功能</li>
+            </ul>
+        </div>
+        
+        <div class="test-buttons">
+            <button onclick="Dictionary.show()">显示词典</button>
+            <button onclick="Dictionary.hide()">隐藏词典</button>
+            <button onclick="Dictionary.toggle()">切换词典</button>
+            <button onclick="testSearch('賃金')">测试查询：賃金</button>
+            <button onclick="testSearch('こんにちは')">测试查询：こんにちは</button>
+            <button onclick="testSearch('森')">测试查询：森</button>
+        </div>
+        
+        <div class="test-text">
+            <h3>测试文本：</h3>
+            <p>こんにちは、私は日本語を勉強しています。</p>
+            <p>ノルウェーの森は美しい小説です。</p>
+            <p>賃金体系について話しましょう。</p>
+            <p>森の中を歩くのは楽しいです。</p>
+        </div>
+        
+        <div class="instructions">
+            <h3>功能特性：</h3>
+            <ul>
+                <li>✅ 实时文本选择查询</li>
+                <li>✅ 在线日语词典API集成</li>
+                <li>✅ 支持汉字、假名、片假名</li>
+                <li>✅ 显示读音、释义、例句</li>
+                <li>✅ 复制选中文本功能</li>
+                <li>✅ 键盘快捷键支持</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 引入词典功能 -->
+    <script src="assets/js/dictionary.js"></script>
+    
+    <script>
+        // 测试搜索函数
+        async function testSearch(word) {
+            console.log('🧪 测试查询:', word);
+            Dictionary.show();
+            await Dictionary.search(word);
+        }
+        
+        // 页面加载完成后初始化词典
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 词典测试页面已加载');
+            setTimeout(() => {
+                if (window.Dictionary) {
+                    Dictionary.init();
+                    console.log('✅ 词典功能已初始化');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

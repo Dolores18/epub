@@ -128,6 +128,16 @@ async function initReader(file = null) {
             await rendition.display();
             debugLog('第一章显示成功');
 
+            // 将rendition设置为全局变量，供词典功能使用
+            window.rendition = rendition;
+            console.log('� rendition已设置为全n局变量');
+
+            // 通知词典功能rendition已创建
+            if (window.Dictionary && window.Dictionary.bindRendition) {
+                console.log('🔍 通知词典功能绑定rendition');
+                window.Dictionary.bindRendition();
+            }
+
             // 分页模式下不需要手动计算页面信息
             // epub.js 会自动处理分页和行截断问题
 
@@ -183,6 +193,17 @@ async function initReader(file = null) {
 
             await rendition.display();
             document.getElementById('loading').style.display = 'none';
+
+            // 将rendition设置为全局变量，供词典功能使用
+            window.rendition = rendition;
+            console.log('🔍 rendition已设置为全局变量');
+
+            // 通知词典功能rendition已创建
+            if (window.Dictionary && window.Dictionary.bindRendition) {
+                console.log('🔍 通知词典功能绑定rendition');
+                window.Dictionary.bindRendition();
+            }
+
             await loadTOC();
             setupEventListeners();
             await book.locations.generate(1024);
@@ -415,6 +436,14 @@ function initializeApp() {
     // 测试库加载
     testLibraries();
 
+    // 初始化词典功能
+    if (window.Dictionary) {
+        console.log('🔍 初始化词典功能...');
+        window.Dictionary.init();
+    } else {
+        console.warn('⚠️ 词典功能未加载');
+    }
+
     // 监听文件导入
     const importInput = document.getElementById('importEpub');
     if (importInput) {
@@ -538,6 +567,9 @@ function initializeApp() {
                 document.getElementById('sidebar').classList.remove('show');
                 document.getElementById('settingsPanel').classList.remove('show');
                 document.getElementById('bottomMenu').classList.remove('show');
+                if (window.Dictionary) {
+                    window.Dictionary.hide();
+                }
                 break;
             case 'm':
             case 'M':
@@ -548,6 +580,13 @@ function initializeApp() {
             case 'T':
                 // T键切换目录
                 toggleSidebar();
+                break;
+            case 'd':
+            case 'D':
+                // D键切换词典
+                if (window.Dictionary) {
+                    window.Dictionary.toggle();
+                }
                 break;
         }
     });
