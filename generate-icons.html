@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生成PWA图标</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .icon-preview {
+            display: inline-block;
+            margin: 10px;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 5px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+    </style>
+</head>
+<body>
+    <h1>PWA图标生成器</h1>
+    <p>点击下面的按钮生成不同尺寸的PWA图标：</p>
+    
+    <button onclick="generateAllIcons()">生成所有图标</button>
+    <button onclick="downloadAll()">下载所有图标</button>
+    
+    <div id="preview"></div>
+
+    <script>
+        const sizes = [16, 32, 72, 96, 128, 144, 152, 192, 384, 512];
+        
+        function generateIcon(size) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = size;
+            canvas.height = size;
+            
+            // 设置背景
+            ctx.fillStyle = '#667eea';
+            ctx.fillRect(0, 0, size, size);
+            
+            // 绘制圆形
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/3, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // 绘制书本图标
+            ctx.fillStyle = '#667eea';
+            const bookWidth = size * 0.4;
+            const bookHeight = size * 0.5;
+            const bookX = size/2 - bookWidth/2;
+            const bookY = size/2 - bookHeight/2;
+            
+            // 书本主体
+            ctx.fillRect(bookX, bookY, bookWidth, bookHeight);
+            
+            // 书本线条
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = size * 0.02;
+            for (let i = 1; i <= 3; i++) {
+                const y = bookY + (bookHeight * i) / 4;
+                ctx.beginPath();
+                ctx.moveTo(bookX + 5, y);
+                ctx.lineTo(bookX + bookWidth - 5, y);
+                ctx.stroke();
+            }
+            
+            return canvas;
+        }
+        
+        function generateAllIcons() {
+            const preview = document.getElementById('preview');
+            preview.innerHTML = '';
+            
+            sizes.forEach(size => {
+                const canvas = generateIcon(size);
+                const div = document.createElement('div');
+                div.className = 'icon-preview';
+                div.innerHTML = `
+                    <canvas id="icon-${size}"></canvas>
+                    <br>${size}x${size}
+                `;
+                preview.appendChild(div);
+                
+                // 复制canvas内容
+                const targetCanvas = document.getElementById(`icon-${size}`);
+                const targetCtx = targetCanvas.getContext('2d');
+                targetCanvas.width = size;
+                targetCanvas.height = size;
+                targetCtx.drawImage(canvas, 0, 0);
+            });
+        }
+        
+        function downloadAll() {
+            sizes.forEach(size => {
+                const canvas = generateIcon(size);
+                const link = document.createElement('a');
+                link.download = `icon-${size}x${size}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+        
+        // 页面加载时生成预览
+        window.addEventListener('load', generateAllIcons);
+    </script>
+</body>
+</html> 
