@@ -1,0 +1,19 @@
+{
+  "books": {
+    "book_5c4a5f17_34c003f0": {
+      "title": "三日間の幸福 (メディアワークス文庫)",
+      "author": "三秋 縋",
+      "filename": "mittukann.epub",
+      "addedDate": "1753824585577",
+      "language": "ja",
+      "fileSize": 333502,
+      "publisher": "株式会社KADOKAWA",
+      "description": "",
+      "identifier": "41f08dd3-1150-458a-99f1-0e067e4674a6"
+    }
+  },
+  "book_files": {
+    "book_5c4a5f17_34c003f0": "books/book_5c4a5f17_34c003f0.epub"
+  },
+  "saved_at": 1753824713.0856361
+}

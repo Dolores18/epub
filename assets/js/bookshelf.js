@@ -20,14 +20,17 @@ async function initBookshelf() {
         return;
     }
 
-    // 加载BookManager的数据
-    window.BookManager.loadFromStorage();
-
-    // 加载保存的书籍数据
-    loadBooksFromStorage();
+    // 临时：强制清理本地存储（因为后端数据已清空）
+    console.log('📚 强制清理本地存储...');
+    localStorage.removeItem('importedBooks');
+    localStorage.removeItem('recentBooks');
+    localStorage.removeItem('bookManager_books');
 
     // 设置事件监听器
     setupEventListeners();
+
+    // 从后端加载书籍数据
+    await loadBooksFromServer();
 
     // 渲染书籍列表
     renderBooks();
@@ -162,29 +165,14 @@ async function handleFileImport(event) {
         console.log('📚 后端响应:', result);
         
         if (result.success) {
-            // 第三步：添加到本地书架（使用前端解析的元数据）
-            for (let i = 0; i < result.books.length; i++) {
-                const serverBook = result.books[i];
-                const localBook = processedBooks[i];
-                
-                importedBooks.push({
-                    id: serverBook.id,
-                    name: localBook.filename,
-                    metadata: localBook.metadata, // 使用前端解析的完整元数据
-                    addedDate: new Date().toISOString(),
-                    size: localBook.file.size,
-                    type: 'imported'
-                });
-            }
+            // 显示成功消息
+            showMessage(`成功添加 ${result.books.length} 本书籍到书架`, 'success');
             
-            // 保存到本地存储
-            saveBooksToStorage();
+            // 重新从服务器加载数据
+            await loadBooksFromServer();
             
             // 重新渲染（现在会显示真实的书名、作者）
             renderBooks();
-            
-            // 显示成功消息
-            showMessage(`成功添加 ${result.books.length} 本书籍到书架`, 'success');
         } else {
             throw new Error(result.message || '上传失败');
         }
@@ -461,8 +449,69 @@ function saveBooksToStorage() {
     }
 }
 
-// 从本地存储加载书籍
-function loadBooksFromStorage() {
+// 从服务器加载书籍数据
+async function loadBooksFromServer() {
+    try {
+        console.log('📚 从服务器加载书籍数据...');
+        
+        const response = await fetch('/api/books');
+        if (!response.ok) {
+            throw new Error(`服务器响应错误: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        if (result.success) {
+            // 转换服务器数据格式为前端格式
+            importedBooks = result.books.map(book => ({
+                id: book.id,
+                name: book.filename,
+                metadata: {
+                    title: book.title,
+                    creator: book.author,
+                    language: book.language,
+                    publisher: book.publisher,
+                    description: book.description,
+                    identifier: book.identifier
+                },
+                addedDate: book.addedDate,
+                size: book.fileSize,
+                type: 'imported'
+            }));
+            
+            console.log(`📚 从服务器加载了 ${importedBooks.length} 本书籍`);
+            
+            // 如果服务器没有书籍，清理本地存储的无效数据
+            if (importedBooks.length === 0) {
+                console.log('📚 服务器无书籍数据，清理本地存储...');
+                localStorage.removeItem('importedBooks');
+                localStorage.removeItem('recentBooks');
+                recentBooks = [];
+            }
+        } else {
+            console.warn('服务器返回失败响应:', result);
+            importedBooks = [];
+        }
+        
+        // 加载最近阅读（仍从本地存储加载）
+        if (importedBooks.length > 0) {
+            const savedRecent = localStorage.getItem('recentBooks');
+            if (savedRecent) {
+                recentBooks = JSON.parse(savedRecent);
+                console.log(`📚 从本地存储加载了 ${recentBooks.length} 条最近阅读记录`);
+            }
+        }
+        
+    } catch (error) {
+        console.error('从服务器加载书籍数据失败:', error);
+        console.log('📚 尝试从本地存储加载...');
+        
+        // 降级到本地存储
+        loadBooksFromLocalStorage();
+    }
+}
+
+// 从本地存储加载书籍（降级方案）
+function loadBooksFromLocalStorage() {
     try {
         // 加载导入的书籍元数据
         const savedBooks = localStorage.getItem('importedBooks');
