@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPUB 阅读器 - 我的书架</title>
+
+    <!-- PWA 相关标签 -->
+    <meta name="description" content="一个现代化的EPUB电子书阅读器，支持日语词典查询功能">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="EPUB阅读器">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-tap-highlight" content="no">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/assets/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/assets/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/assets/icons/icon-152x152.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/icon-16x16.png">
+
+    <!-- 引入样式文件 -->
+    <link rel="stylesheet" href="assets/css/bookshelf.css">
+</head>
+
+<body>
+    <!-- 书架主容器 -->
+    <div class="bookshelf-container">
+        <!-- 头部 -->
+        <header class="bookshelf-header">
+            <h1>📚 我的书架</h1>
+            <p class="subtitle">选择一本书开始阅读</p>
+        </header>
+
+        <!-- 导入区域 -->
+        <div class="import-section">
+            <div class="import-card">
+                <div class="import-icon">📁</div>
+                <h3>导入新书</h3>
+                <p>支持 .epub 格式的电子书文件</p>
+                <input type="file" id="importEpub" accept=".epub" multiple />
+                <label for="importEpub" class="import-btn">选择文件</label>
+            </div>
+        </div>
+
+        <!-- 书籍列表 -->
+        <div class="books-section">
+            <h2>📖 我的图书</h2>
+            <div class="books-grid" id="booksGrid">
+                <!-- 预设的示例书籍 -->
+                <div class="book-card" data-file="mittukann.epub">
+                    <div class="book-cover">
+                        <div class="book-cover-placeholder">📘</div>
+                    </div>
+                    <div class="book-info">
+                        <h3 class="book-title">三日間の幸福</h3>
+                        <p class="book-author">三秋縋</p>
+                        <p class="book-language">🇯🇵 日文</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最近阅读 -->
+        <div class="recent-section">
+            <h2>🕒 最近阅读</h2>
+            <div class="recent-books" id="recentBooks">
+                <p class="empty-message">暂无最近阅读的书籍</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载提示 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>正在打开电子书...</p>
+        </div>
+    </div>
+
+    <!-- 引入JavaScript库 -->
+    <script src="assets/js/jszip.min.js"></script>
+    <script src="assets/js/epub.min.js"></script>
+
+    <!-- 引入书籍管理器 -->
+    <script src="assets/js/bookManager.js"></script>
+
+    <!-- 引入书架功能 -->
+    <script src="assets/js/bookshelf.js"></script>
+
+    <!-- PWA Service Worker 注册 -->
+    <script>
+        // 注册 Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker 注册成功:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker 注册失败:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+
+</html>
