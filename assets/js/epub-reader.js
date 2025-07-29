@@ -190,6 +190,9 @@ async function initReader(file = null) {
             debugLog('显示第一章...');
             await rendition.display();
 
+            // 应用保存的字体大小设置
+            applyInitialFontSize();
+
             // 尝试获取语言信息并设置相应字体
             debugLog('获取EPUB语言信息...');
             try {
@@ -278,6 +281,10 @@ async function initReader(file = null) {
             });
 
             await rendition.display();
+            
+            // 应用保存的字体大小设置
+            applyInitialFontSize();
+            
             document.getElementById('loading').style.display = 'none';
 
             // 将rendition设置为全局变量，供词典功能使用
@@ -605,12 +612,87 @@ function toggleBottomMenu() {
     }
 }
 
+// 全局变量来跟踪当前字体大小
+let currentFontSize = 16;
+
 // 改变字体大小
 function changeFontSize(delta) {
-    if (rendition) {
-        const currentSize = parseInt(rendition.themes.fontSize()) || 16;
-        const newSize = Math.max(12, Math.min(24, currentSize + delta));
+    if (!rendition) {
+        console.warn('rendition 未初始化，无法调整字体大小');
+        return;
+    }
+
+    try {
+        console.log('调整前字体大小:', currentFontSize, '调整量:', delta);
+
+        // 计算新的字体大小，限制在合理范围内
+        const newSize = Math.max(10, Math.min(32, currentFontSize + delta));
+        
+        if (newSize === currentFontSize) {
+            console.log('字体大小已达到限制，无法继续调整');
+            return;
+        }
+
+        console.log('新字体大小:', newSize);
+
+        // 更新全局变量
+        currentFontSize = newSize;
+
+        // 使用 epub.js 的主题系统设置字体大小
+        rendition.themes.override({
+            'body': { 
+                'font-size': newSize + 'px !important'
+            },
+            '*': { 
+                'font-size': newSize + 'px !important'
+            },
+            'p': { 
+                'font-size': newSize + 'px !important'
+            },
+            'div': { 
+                'font-size': newSize + 'px !important'
+            }
+        });
+
+        // 也尝试使用 fontSize 方法
         rendition.themes.fontSize(newSize + 'px');
+
+        console.log('字体大小已调整为:', newSize + 'px');
+
+        // 保存到本地存储
+        localStorage.setItem('epubReaderFontSize', newSize.toString());
+
+    } catch (error) {
+        console.error('调整字体大小失败:', error);
+    }
+}
+
+// 初始化字体大小（从本地存储加载）
+function initializeFontSize() {
+    try {
+        const savedSize = localStorage.getItem('epubReaderFontSize');
+        if (savedSize) {
+            currentFontSize = parseInt(savedSize);
+            console.log('从本地存储加载字体大小:', currentFontSize);
+        }
+    } catch (error) {
+        console.error('加载字体大小设置失败:', error);
+    }
+}
+
+// 应用初始字体大小
+function applyInitialFontSize() {
+    if (rendition && currentFontSize !== 16) {
+        console.log('应用初始字体大小:', currentFontSize);
+        rendition.themes.override({
+            'body': { 
+                'font-size': currentFontSize + 'px !important'
+            },
+            '*': { 
+                'font-size': currentFontSize + 'px !important'
+            }
+        });
+        rendition.themes.fontSize(currentFontSize + 'px');
     }
 }
 
@@ -656,6 +738,9 @@ function showError(message) {
 function initializeApp() {
     // 测试库加载
     testLibraries();
+
+    // 初始化字体大小设置
+    initializeFontSize();
 
     // 初始化词典功能
     if (window.Dictionary) {
