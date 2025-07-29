@@ -208,6 +208,41 @@ body {
     /* 避免寡行 */
 }
 
+/* 竖排文本支持 */
+#viewer.vertical-rl {
+    writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl;
+    -ms-writing-mode: tb-rl;
+    direction: rtl;
+}
+
+#viewer.vertical-rl iframe {
+    writing-mode: vertical-rl;
+    -webkit-writing-mode: vertical-rl;
+    -ms-writing-mode: tb-rl;
+}
+
+/* 竖排时的文本方向调整 */
+#viewer.vertical-rl p,
+#viewer.vertical-rl div {
+    text-align: justify;
+    line-height: 2.0;
+    text-orientation: mixed;
+    -webkit-text-orientation: mixed;
+}
+
+/* 竖排时的标点符号和数字处理 */
+#viewer.vertical-rl .tcy {
+    text-combine-upright: digits 2;
+    -webkit-text-combine: horizontal;
+}
+
+/* 竖排时的页面布局调整 */
+#viewer.vertical-rl {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
 /* 加载和错误状态 */
 .loading {
     position: absolute;
