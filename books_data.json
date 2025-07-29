@@ -9,11 +9,25 @@
       "fileSize": 333502,
       "publisher": "株式会社KADOKAWA",
       "description": "",
-      "identifier": "41f08dd3-1150-458a-99f1-0e067e4674a6"
+      "identifier": "41f08dd3-1150-458a-99f1-0e067e4674a6",
+      "coverPath": "books/covers/book_5c4a5f17_34c003f0.jpg"
+    },
+    "book_73bc7ffc_2101765a": {
+      "title": "ノルウェーの森",
+      "author": "村上春樹",
+      "filename": "noruwei.epub",
+      "addedDate": "1753825033013",
+      "language": "ja",
+      "fileSize": 353323,
+      "publisher": "講談社",
+      "description": "",
+      "identifier": "87da2ed9-eef8-41bd-8c59-0b8f5583cd5a",
+      "coverPath": "books/covers/book_73bc7ffc_2101765a.jpg"
     }
   },
   "book_files": {
-    "book_5c4a5f17_34c003f0": "books/book_5c4a5f17_34c003f0.epub"
+    "book_5c4a5f17_34c003f0": "books/book_5c4a5f17_34c003f0.epub",
+    "book_73bc7ffc_2101765a": "books/book_73bc7ffc_2101765a.epub"
   },
-  "saved_at": 1753824713.0856361
+  "saved_at": 1753825916.3625479
 }

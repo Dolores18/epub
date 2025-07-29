@@ -28,6 +28,7 @@ BOOKS_STORAGE = {}
 BOOK_FILES = {}  # 改名：存储永久文件路径
 BOOKS_DATA_FILE = 'books_data.json'
 BOOKS_DIR = 'books'  # 书籍存储目录
+COVERS_DIR = 'books/covers'  # 封面存储目录
 
 def generate_book_id(file_content, filename):
     """基于文件内容生成唯一的bookId"""
@@ -40,6 +41,10 @@ def ensure_books_directory():
     if not os.path.exists(BOOKS_DIR):
         os.makedirs(BOOKS_DIR)
         print(f"📁 创建书籍存储目录: {BOOKS_DIR}")
+    
+    if not os.path.exists(COVERS_DIR):
+        os.makedirs(COVERS_DIR)
+        print(f"📁 创建封面存储目录: {COVERS_DIR}")
 
 def save_books_data():
     """保存书籍数据到文件"""
@@ -121,6 +126,31 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(404, "index.html not found")
             return
         
+        # 处理API路由 /api/cover/<bookId> - 获取书籍封面
+        if path.startswith('/api/cover/'):
+            book_id = path[11:]  # 移除 '/api/cover/' 前缀
+            if book_id in BOOKS_STORAGE:
+                book_info = BOOKS_STORAGE[book_id]
+                cover_path = book_info.get('coverPath')
+                
+                if cover_path and os.path.exists(cover_path):
+                    print(f"📸 提供封面: {book_id}")
+                    
+                    self.send_response(200)
+                    self.send_header('Content-type', 'image/jpeg')
+                    self.send_header('Cache-Control', 'public, max-age=86400')  # 缓存1天
+                    self.end_headers()
+                    
+                    with open(cover_path, 'rb') as f:
+                        self.wfile.write(f.read())
+                    return
+                else:
+                    self.send_error(404, f"Cover not found: {book_id}")
+                    return
+            else:
+                self.send_error(404, f"Book not found: {book_id}")
+                return
+        
         # 处理API路由 /api/books - 获取所有书籍列表
         if path == '/api/books':
             print(f"📚 获取书籍列表，共 {len(BOOKS_STORAGE)} 本书")
@@ -132,6 +162,9 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             # 构建书籍列表响应
             books_list = []
             for book_id, book_info in BOOKS_STORAGE.items():
+                # 检查是否有封面
+                has_cover = book_info.get('coverPath') and os.path.exists(book_info.get('coverPath', ''))
+                
                 books_list.append({
                     'id': book_id,
                     'title': book_info['title'],
@@ -142,7 +175,9 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     'addedDate': book_info['addedDate'],
                     'publisher': book_info.get('publisher', '未知出版商'),
                     'description': book_info.get('description', ''),
-                    'identifier': book_info.get('identifier', '')
+                    'identifier': book_info.get('identifier', ''),
+                    'hasCover': has_cover,
+                    'coverUrl': f'/api/cover/{book_id}' if has_cover else None
                 })
             
             response = {
@@ -262,13 +297,19 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(400, "No data uploaded")
                     return
                 
-                # 分离文件和元数据
+                # 分离文件、元数据和封面
                 files = []
                 metadata_map = {}
+                covers_map = {}
                 
                 for item in parsed_data:
-                    if item['type'] == 'file' and item['filename'].lower().endswith('.epub'):
-                        files.append(item)
+                    if item['type'] == 'file':
+                        if item['filename'].lower().endswith('.epub'):
+                            files.append(item)
+                        elif item['name'].startswith('cover_'):
+                            # 封面文件
+                            index = item['name'].split('_')[1]
+                            covers_map[index] = item
                     elif item['type'] == 'field' and item['name'].startswith('metadata_'):
                         # 解析元数据字段
                         index = item['name'].split('_')[1]
@@ -298,6 +339,19 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     with open(book_file_path, 'wb') as f:
                         f.write(content)
                     
+                    # 处理封面
+                    cover_path = None
+                    cover_data = covers_map.get(str(file_index))
+                    if cover_data:
+                        try:
+                            cover_path = os.path.join(COVERS_DIR, f"{book_id}.jpg")
+                            with open(cover_path, 'wb') as f:
+                                f.write(cover_data['content'])
+                            print(f"📸 封面保存成功: {cover_path}")
+                        except Exception as e:
+                            print(f"❌ 封面保存失败: {e}")
+                            cover_path = None
+                    
                     # 获取对应的元数据
                     metadata = metadata_map.get(str(file_index), {})
                     
@@ -318,7 +372,8 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         'fileSize': len(content),
                         'publisher': metadata.get('publisher', '未知出版商'),
                         'description': metadata.get('description', ''),
-                        'identifier': metadata.get('identifier', '')
+                        'identifier': metadata.get('identifier', ''),
+                        'coverPath': cover_path  # 添加封面路径
                     }
                     
                     BOOK_FILES[book_id] = book_file_path
@@ -351,6 +406,77 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 print(f"❌ 文件上传失败: {e}")
                 self.send_error(500, f"Upload failed: {str(e)}")
+            
+            return
+        
+        # 处理封面上传 /api/upload-cover
+        if path == '/api/upload-cover':
+            try:
+                # 解析multipart/form-data
+                content_type = self.headers.get('Content-Type', '')
+                if not content_type.startswith('multipart/form-data'):
+                    self.send_error(400, "Content-Type must be multipart/form-data")
+                    return
+                
+                # 获取boundary
+                boundary = content_type.split('boundary=')[1]
+                
+                # 读取POST数据
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                
+                # 解析数据
+                parsed_data = self.parse_multipart(post_data, boundary)
+                
+                book_id = None
+                cover_data = None
+                
+                for item in parsed_data:
+                    if item['type'] == 'field' and item['name'] == 'bookId':
+                        book_id = item['content'].decode('utf-8')
+                    elif item['type'] == 'file' and item['name'] == 'cover':
+                        cover_data = item
+                
+                if not book_id or not cover_data:
+                    self.send_error(400, "Missing bookId or cover data")
+                    return
+                
+                if book_id not in BOOKS_STORAGE:
+                    self.send_error(404, f"Book not found: {book_id}")
+                    return
+                
+                # 确保封面目录存在
+                ensure_books_directory()
+                
+                # 保存封面
+                cover_path = os.path.join(COVERS_DIR, f"{book_id}.jpg")
+                with open(cover_path, 'wb') as f:
+                    f.write(cover_data['content'])
+                
+                # 更新书籍信息
+                BOOKS_STORAGE[book_id]['coverPath'] = cover_path
+                
+                # 保存数据
+                save_books_data()
+                
+                print(f"📸 封面补充成功: {book_id}")
+                
+                # 返回成功响应
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.end_headers()
+                
+                response = {
+                    'success': True,
+                    'message': '封面上传成功',
+                    'coverUrl': f'/api/cover/{book_id}'
+                }
+                
+                self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                
+            except Exception as e:
+                print(f"❌ 封面上传失败: {e}")
+                self.send_error(500, f"Cover upload failed: {str(e)}")
             
             return
         

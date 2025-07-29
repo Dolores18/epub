@@ -26,6 +26,9 @@ async function initBookshelf() {
     localStorage.removeItem('recentBooks');
     localStorage.removeItem('bookManager_books');
 
+    // 确保加载提示是隐藏的
+    hideLoading();
+
     // 设置事件监听器
     setupEventListeners();
 
@@ -44,6 +47,15 @@ async function initBookshelf() {
             console.error('📚 清理无效数据时出错:', error);
         }
     }, 1000); // 延迟1秒，让页面先正常显示
+
+    // 异步提取缺失的封面
+    setTimeout(async () => {
+        try {
+            await extractMissingCovers();
+        } catch (error) {
+            console.error('📚 提取封面时出错:', error);
+        }
+    }, 2000); // 延迟2秒，让页面完全加载
 
     console.log('📚 书架初始化完成');
 }
@@ -109,8 +121,15 @@ async function handleFileImport(event) {
                 
                 // 尝试获取封面
                 let coverUrl = null;
+                let coverBlob = null;
                 try {
                     coverUrl = await book.coverUrl();
+                    if (coverUrl) {
+                        // 将封面转换为blob以便上传
+                        const response = await fetch(coverUrl);
+                        coverBlob = await response.blob();
+                        console.log('📚 封面获取成功:', coverBlob.size, 'bytes');
+                    }
                 } catch (coverError) {
                     console.warn('获取封面失败:', coverError);
                 }
@@ -118,6 +137,7 @@ async function handleFileImport(event) {
                 const bookInfo = {
                     file: file,
                     filename: file.name,
+                    coverBlob: coverBlob, // 添加封面blob
                     metadata: {
                         title: metadata.title || file.name.replace('.epub', ''),
                         creator: metadata.creator || '未知作者',
@@ -146,10 +166,15 @@ async function handleFileImport(event) {
         console.log('📚 上传文件到后端...');
         const formData = new FormData();
         
-        // 添加文件和元数据
+        // 添加文件、元数据和封面
         processedBooks.forEach((bookInfo, index) => {
             formData.append('files', bookInfo.file);
             formData.append(`metadata_${index}`, JSON.stringify(bookInfo.metadata));
+            
+            // 如果有封面，添加封面文件
+            if (bookInfo.coverBlob) {
+                formData.append(`cover_${index}`, bookInfo.coverBlob, `cover_${index}.jpg`);
+            }
         });
         
         const response = await fetch('/api/upload', {
@@ -215,6 +240,7 @@ async function openBook(fileName) {
 
         // 跳转到阅读器页面（使用简洁的路由）
         setTimeout(() => {
+            hideLoading(); // 跳转前隐藏加载提示
             window.location.href = `/book/${encodeURIComponent(bookInfo.id)}`;
         }, 500);
 
@@ -234,7 +260,7 @@ function openImportedBook(bookData) {
 
     // 添加到最近阅读
     addToRecentBooks({
-        name: bookData.title || bookData.name,
+        name: bookData.metadata?.title || bookData.name,
         id: bookData.id,
         type: 'imported',
         lastRead: new Date().toISOString()
@@ -242,6 +268,7 @@ function openImportedBook(bookData) {
 
     // 跳转到阅读器页面（使用简洁的路由）
     setTimeout(() => {
+        hideLoading(); // 跳转前隐藏加载提示
         window.location.href = `/book/${encodeURIComponent(bookData.id)}`;
     }, 500);
 }
@@ -415,14 +442,36 @@ function renderRecentBooks() {
 
         const lastReadDate = new Date(book.lastRead).toLocaleDateString();
 
+        // 获取书籍的真实信息
+        let displayTitle = book.name;
+        let displayAuthor = '最后阅读: ' + lastReadDate;
+        let coverContent = '<div class="book-cover-placeholder">📖</div>';
+        
+        if (book.type === 'preset') {
+            // 预设书籍使用固定信息
+            displayTitle = getBookDisplayName(book.fileName || book.name);
+            coverContent = '<div class="book-cover-placeholder">📘</div>';
+        } else {
+            // 导入书籍查找真实信息
+            const importedBook = importedBooks.find(b => b.id === book.id);
+            if (importedBook) {
+                displayTitle = importedBook.metadata?.title || importedBook.name;
+                displayAuthor = importedBook.metadata?.creator || '未知作者';
+                
+                if (importedBook.metadata?.coverUrl) {
+                    coverContent = `<img src="${importedBook.metadata.coverUrl}" alt="封面" />`;
+                }
+            }
+        }
+
         bookCard.innerHTML = `
             <div class="book-cover">
-                <div class="book-cover-placeholder">📖</div>
+                ${coverContent}
             </div>
             <div class="book-info">
-                <h3 class="book-title">${escapeHtml(book.name)}</h3>
-                <p class="book-author">最后阅读: ${lastReadDate}</p>
-                <p class="book-language">${book.type === 'preset' ? '🇯🇵 日文' : '📁 导入'}</p>
+                <h3 class="book-title">${escapeHtml(displayTitle)}</h3>
+                <p class="book-author">${escapeHtml(displayAuthor)}</p>
+                <p class="book-language">最后阅读: ${lastReadDate}</p>
             </div>
         `;
 
@@ -471,7 +520,8 @@ async function loadBooksFromServer() {
                     language: book.language,
                     publisher: book.publisher,
                     description: book.description,
-                    identifier: book.identifier
+                    identifier: book.identifier,
+                    coverUrl: book.coverUrl  // 使用服务器提供的封面URL
                 },
                 addedDate: book.addedDate,
                 size: book.fileSize,
@@ -655,6 +705,106 @@ function escapeHtml(text) {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', initBookshelf);
+
+// 提取缺失的封面
+async function extractMissingCovers() {
+    console.log('📸 开始检查并提取缺失的封面...');
+    
+    // 找出没有封面的书籍
+    const booksWithoutCover = importedBooks.filter(book => !book.metadata?.coverUrl);
+    
+    if (booksWithoutCover.length === 0) {
+        console.log('📸 所有书籍都有封面，无需提取');
+        return;
+    }
+    
+    console.log(`📸 发现 ${booksWithoutCover.length} 本书籍缺少封面，开始提取...`);
+    
+    // 显示提取进度提示
+    showMessage(`正在为 ${booksWithoutCover.length} 本书籍提取封面...`, 'info');
+    
+    let extractedCount = 0;
+    
+    for (const book of booksWithoutCover) {
+        try {
+            console.log(`📸 正在为 "${book.metadata.title}" 提取封面...`);
+            
+            // 从服务器下载EPUB文件
+            const response = await fetch(`/api/book/${encodeURIComponent(book.id)}`);
+            if (!response.ok) {
+                console.warn(`📸 无法下载书籍文件: ${book.id}`);
+                continue;
+            }
+            
+            const arrayBuffer = await response.arrayBuffer();
+            
+            // 使用epub.js解析封面
+            const epubBook = ePub(arrayBuffer);
+            await epubBook.ready;
+            
+            let coverUrl = null;
+            try {
+                coverUrl = await epubBook.coverUrl();
+            } catch (coverError) {
+                console.warn(`📸 无法提取封面: ${book.metadata.title}`, coverError);
+                continue;
+            }
+            
+            if (!coverUrl) {
+                console.warn(`📸 书籍无封面: ${book.metadata.title}`);
+                continue;
+            }
+            
+            // 将封面转换为blob
+            const coverResponse = await fetch(coverUrl);
+            const coverBlob = await coverResponse.blob();
+            
+            // 上传封面到服务器
+            const formData = new FormData();
+            formData.append('bookId', book.id);
+            formData.append('cover', coverBlob, `${book.id}_cover.jpg`);
+            
+            const uploadResponse = await fetch('/api/upload-cover', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (uploadResponse.ok) {
+                const result = await uploadResponse.json();
+                console.log(`📸 封面提取成功: ${book.metadata.title}`);
+                
+                // 更新本地数据
+                book.metadata.coverUrl = result.coverUrl;
+                
+                // 重新渲染书籍卡片和最近阅读
+                renderBooks();
+                renderRecentBooks();
+                
+                extractedCount++;
+            } else {
+                console.warn(`📸 封面上传失败: ${book.metadata.title}`);
+            }
+            
+            // 释放资源
+            URL.revokeObjectURL(coverUrl);
+            
+            // 添加延迟，避免过于频繁的请求
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+        } catch (error) {
+            console.error(`📸 处理书籍封面失败: ${book.metadata.title}`, error);
+        }
+    }
+    
+    console.log('📸 封面提取完成');
+    
+    // 显示完成提示
+    if (extractedCount > 0) {
+        showMessage(`成功为 ${extractedCount} 本书籍提取了封面`, 'success');
+    }
+}
+
+
 
 // 导出函数供其他页面使用
 window.Bookshelf = {
