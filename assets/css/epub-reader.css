@@ -33,7 +33,7 @@ body {
 /* 引入本地 IPA 明朝体 */
 @font-face {
     font-family: 'IPAexMinchoWeb';
-    src: url('./fonts/ipaexm.ttf') format('truetype');
+    src: url('../fonts/ipaexm.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }

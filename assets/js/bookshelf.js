@@ -10,7 +10,7 @@ let importedBooks = [];
 let recentBooks = [];
 
 // 初始化书架
-function initBookshelf() {
+async function initBookshelf() {
     console.log('📚 初始化书架...');
 
     // 等待BookManager初始化完成
@@ -32,6 +32,13 @@ function initBookshelf() {
     // 渲染书籍列表
     renderBooks();
     renderRecentBooks();
+
+    // 清理无效数据（基于数据合理性，不发送网络请求）
+    try {
+        cleanupInvalidBooks();
+    } catch (error) {
+        console.error('📚 清理无效数据时出错:', error);
+    }
 
     console.log('📚 书架初始化完成');
 }
@@ -421,6 +428,80 @@ function loadBooksFromStorage() {
         console.error('加载书籍数据失败:', error);
         importedBooks = [];
         recentBooks = [];
+    }
+}
+
+// 清理无效的书籍数据（基于数据合理性检查）
+function cleanupInvalidBooks() {
+    console.log('📚 开始清理无效的书籍数据...');
+    
+    let cleanedCount = 0;
+    const now = Date.now();
+    const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000); // 一周前
+
+    // 检查导入书籍数据的合理性
+    const validBooks = importedBooks.filter(book => {
+        // 检查必要字段
+        if (!book.id || !book.name || !book.addedDate) {
+            console.log('📚 清理缺少必要字段的书籍:', book.name || '未知');
+            cleanedCount++;
+            return false;
+        }
+
+        // 检查添加时间（清理超过一周的旧数据，因为服务器重启会丢失）
+        const addedTime = new Date(book.addedDate).getTime();
+        if (isNaN(addedTime) || addedTime < oneWeekAgo) {
+            console.log('📚 清理过期的书籍数据:', book.name);
+            cleanedCount++;
+            return false;
+        }
+
+        return true;
+    });
+
+    // 清理最近阅读记录
+    const validRecentBooks = recentBooks.filter(recentBook => {
+        if (recentBook.type === 'preset') {
+            // 预设书籍保留
+            return true;
+        } else if (recentBook.type === 'imported') {
+            // 检查对应的导入书籍是否还存在
+            const bookExists = validBooks.some(book => book.id === recentBook.id);
+            if (!bookExists) {
+                console.log('📚 清理无效的最近阅读记录:', recentBook.name);
+                cleanedCount++;
+                return false;
+            }
+
+            // 检查最近阅读时间（清理超过一周的记录）
+            const lastReadTime = new Date(recentBook.lastRead).getTime();
+            if (isNaN(lastReadTime) || lastReadTime < oneWeekAgo) {
+                console.log('📚 清理过期的最近阅读记录:', recentBook.name);
+                cleanedCount++;
+                return false;
+            }
+
+            return true;
+        }
+        return false;
+    });
+
+    // 更新数据
+    importedBooks = validBooks;
+    recentBooks = validRecentBooks;
+
+    // 保存清理后的数据
+    saveBooksToStorage();
+    localStorage.setItem('recentBooks', JSON.stringify(recentBooks));
+
+    // 重新渲染页面
+    renderBooks();
+    renderRecentBooks();
+
+    console.log(`📚 清理完成，共清理了 ${cleanedCount} 个无效项目`);
+    
+    if (cleanedCount > 0) {
+        showMessage(`已自动清理 ${cleanedCount} 个过期的书籍记录`, 'success');
     }
 }
 

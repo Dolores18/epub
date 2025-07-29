@@ -281,10 +281,10 @@ async function initReader(file = null) {
             });
 
             await rendition.display();
-            
+
             // 应用保存的字体大小设置
             applyInitialFontSize();
-            
+
             document.getElementById('loading').style.display = 'none';
 
             // 将rendition设置为全局变量，供词典功能使用
@@ -627,7 +627,7 @@ function changeFontSize(delta) {
 
         // 计算新的字体大小，限制在合理范围内
         const newSize = Math.max(10, Math.min(32, currentFontSize + delta));
-        
+
         if (newSize === currentFontSize) {
             console.log('字体大小已达到限制，无法继续调整');
             return;
@@ -640,16 +640,16 @@ function changeFontSize(delta) {
 
         // 使用 epub.js 的主题系统设置字体大小
         rendition.themes.override({
-            'body': { 
+            'body': {
                 'font-size': newSize + 'px !important'
             },
-            '*': { 
+            '*': {
                 'font-size': newSize + 'px !important'
             },
-            'p': { 
+            'p': {
                 'font-size': newSize + 'px !important'
             },
-            'div': { 
+            'div': {
                 'font-size': newSize + 'px !important'
             }
         });
@@ -685,10 +685,10 @@ function applyInitialFontSize() {
     if (rendition && currentFontSize !== 16) {
         console.log('应用初始字体大小:', currentFontSize);
         rendition.themes.override({
-            'body': { 
+            'body': {
                 'font-size': currentFontSize + 'px !important'
             },
-            '*': { 
+            '*': {
                 'font-size': currentFontSize + 'px !important'
             }
         });
@@ -1041,7 +1041,121 @@ function loadMarginSettings() {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', initializeApp);
-window.addEventListener('load', initReader);
+
+// 页面加载完成后的处理
+window.addEventListener('load', async function () {
+    console.log('🔍 阅读器页面加载完成');
+
+    // 延迟一点时间，确保DOM完全加载
+    setTimeout(async () => {
+        // 检查URL参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookId = urlParams.get('bookId');
+
+        if (bookId) {
+            console.log('🔍 从书架传来的bookId:', bookId);
+            try {
+                await loadBookFromAPI(bookId);
+            } catch (error) {
+                console.error('❌ 加载书籍失败:', error);
+                showError(`加载书籍失败: ${error.message}`);
+            }
+        } else if (!book && !rendition) {
+            console.log('🔍 没有参数，尝试加载默认EPUB文件');
+            initReader();
+        } else {
+            console.log('🔍 已有文件加载，跳过默认文件加载');
+        }
+    }, 100);
+});
+
+// 从后端API加载书籍
+async function loadBookFromAPI(bookId) {
+    console.log('📚 从后端API获取书籍:', bookId);
+
+    try {
+        // 构建API URL
+        const apiUrl = `/api/book/${encodeURIComponent(bookId)}`;
+        console.log('📚 请求URL:', apiUrl);
+
+        // 获取EPUB文件
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+            throw new Error(`获取书籍失败: ${response.status} ${response.statusText}`);
+        }
+
+        // 获取文件blob
+        const blob = await response.blob();
+        console.log('📚 获取到文件blob:', blob.size, 'bytes');
+
+        // 转换为ArrayBuffer避免路径问题
+        console.log('📚 转换为ArrayBuffer...');
+        const arrayBuffer = await blob.arrayBuffer();
+        console.log('📚 ArrayBuffer大小:', arrayBuffer.byteLength, 'bytes');
+
+        // 创建book对象
+        console.log('📚 创建epub.js对象...');
+        book = ePub(arrayBuffer);
+        console.log('📚 book对象创建成功');
+
+        // 创建渲染器
+        rendition = book.renderTo('viewer', {
+            width: '100%',
+            height: '100%',
+            spread: 'none',
+            allowScriptedContent: true,
+            flow: 'paginated',
+            manager: 'default'
+        });
+        console.log('📚 rendition创建成功');
+
+        // 显示内容
+        console.log('📚 开始显示内容...');
+        await rendition.display();
+        console.log('📚 内容显示成功');
+
+        // 设置全局变量
+        window.rendition = rendition;
+        console.log('📚 设置全局rendition变量');
+
+        // 通知词典功能
+        if (window.Dictionary && window.Dictionary.bindRendition) {
+            console.log('📚 通知词典功能绑定rendition');
+            window.Dictionary.bindRendition();
+        }
+
+        // 隐藏加载提示
+        document.getElementById('loading').style.display = 'none';
+
+        // 加载目录 - 这是关键！
+        console.log('📚 加载目录...');
+        try {
+            await loadTOC();
+            console.log('📚 目录加载成功');
+        } catch (tocError) {
+            console.error('📚 目录加载失败:', tocError);
+        }
+
+        // 设置事件监听器
+        setupEventListeners();
+
+        console.log('📚 书籍加载完成！');
+
+    } catch (error) {
+        console.error('❌ 从后端获取书籍失败:', error);
+        showError(`
+            <div>
+                <h3>无法加载书籍</h3>
+                <p>书籍ID: ${bookId}</p>
+                <p>错误信息: ${error.message}</p>
+                <button onclick="window.location.href='/'" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    返回书架
+                </button>
+            </div>
+        `);
+    }
+}
 
 // 页面卸载时保存设置
 window.addEventListener('beforeunload', saveMarginSettings);
