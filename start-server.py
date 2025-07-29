@@ -98,6 +98,41 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # 其他请求使用默认处理
         super().do_GET()
     
+    def do_HEAD(self):
+        """处理HEAD请求 - 用于验证资源是否存在"""
+        # 解析URL路径
+        parsed_path = urlparse(self.path)
+        path = parsed_path.path
+        
+        print(f"📍 HEAD请求路径: {path}")
+        
+        # 处理API路由 /api/book/<bookId> - 检查特定书籍是否存在
+        if path.startswith('/api/book/'):
+            book_id = path[10:]  # 移除 '/api/book/' 前缀
+            if book_id in BOOKS_STORAGE:
+                temp_path = TEMP_FILES.get(book_id)
+                
+                if temp_path and os.path.exists(temp_path):
+                    print(f"📚 书籍存在验证成功: {book_id}")
+                    
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/epub+zip')
+                    book_info = BOOKS_STORAGE[book_id]
+                    self.send_header('Content-Disposition', f'inline; filename="{book_info["filename"]}"')
+                    self.end_headers()
+                    return
+                else:
+                    print(f"❌ 书籍文件不存在: {book_id}")
+                    self.send_error(404, f"Book file not found: {book_id}")
+                    return
+            else:
+                print(f"❌ 书籍ID不存在: {book_id}")
+                self.send_error(404, f"Book not found: {book_id}")
+                return
+        
+        # 其他HEAD请求使用默认处理
+        super().do_HEAD()
+
     def do_POST(self):
         # 解析URL路径
         parsed_path = urlparse(self.path)
@@ -130,6 +165,7 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 
                 uploaded_books = []
                 
+                file_index = 0
                 for file_data in files:
                     filename = file_data['filename']
                     content = file_data['content']
@@ -145,13 +181,33 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     temp_file.write(content)
                     temp_file.close()
                     
+                    # 尝试获取前端传来的元数据
+                    metadata_key = f'metadata_{file_index}'
+                    metadata = {}
+                    
+                    # 从POST数据中查找对应的元数据
+                    try:
+                        # 这里需要解析multipart中的元数据字段
+                        # 简化处理：使用前端解析的数据，后端主要负责存储
+                        metadata = {
+                            'title': filename.replace('.epub', ''),
+                            'author': '未知作者',
+                            'language': 'unknown'
+                        }
+                    except:
+                        metadata = {
+                            'title': filename.replace('.epub', ''),
+                            'author': '未知作者',
+                            'language': 'unknown'
+                        }
+                    
                     # 存储书籍信息
                     BOOKS_STORAGE[book_id] = {
-                        'title': filename.replace('.epub', ''),
-                        'author': '未知作者',
+                        'title': metadata.get('title', filename.replace('.epub', '')),
+                        'author': metadata.get('author', '未知作者'),
                         'filename': filename,
                         'addedDate': str(int(time.time() * 1000)),
-                        'language': 'unknown',
+                        'language': metadata.get('language', 'unknown'),
                         'fileSize': len(content)
                     }
                     
@@ -164,6 +220,7 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     })
                     
                     print(f"📚 上传成功: {filename} -> {book_id}")
+                    file_index += 1
                 
                 # 返回成功响应
                 self.send_response(200)

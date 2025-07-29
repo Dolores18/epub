@@ -33,12 +33,14 @@ async function initBookshelf() {
     renderBooks();
     renderRecentBooks();
 
-    // 清理无效数据（基于数据合理性，不发送网络请求）
-    try {
-        cleanupInvalidBooks();
-    } catch (error) {
-        console.error('📚 清理无效数据时出错:', error);
-    }
+    // 异步清理无效数据（向后端验证bookId）
+    setTimeout(async () => {
+        try {
+            await cleanupInvalidBooks();
+        } catch (error) {
+            console.error('📚 清理无效数据时出错:', error);
+        }
+    }, 1000); // 延迟1秒，让页面先正常显示
 
     console.log('📚 书架初始化完成');
 }
@@ -82,20 +84,71 @@ async function handleFileImport(event) {
     showLoading();
     
     try {
-        // 创建FormData对象
-        const formData = new FormData();
+        const processedBooks = [];
         
-        // 添加文件到FormData
+        // 第一步：前端解析每个文件的元数据
         for (const file of files) {
             if (!file.name.toLowerCase().endsWith('.epub')) {
                 showMessage(`跳过非EPUB文件: ${file.name}`, 'error');
                 continue;
             }
-            formData.append('files', file);
+            
+            console.log('📚 解析文件元数据:', file.name);
+            
+            try {
+                // 使用epub.js解析元数据
+                const arrayBuffer = await file.arrayBuffer();
+                const book = ePub(arrayBuffer);
+                await book.ready;
+                
+                // 提取元数据
+                const metadata = book.package.metadata;
+                
+                // 尝试获取封面
+                let coverUrl = null;
+                try {
+                    coverUrl = await book.coverUrl();
+                } catch (coverError) {
+                    console.warn('获取封面失败:', coverError);
+                }
+                
+                const bookInfo = {
+                    file: file,
+                    filename: file.name,
+                    metadata: {
+                        title: metadata.title || file.name.replace('.epub', ''),
+                        creator: metadata.creator || '未知作者',
+                        language: metadata.language || 'unknown',
+                        publisher: metadata.publisher || '未知出版商',
+                        identifier: metadata.identifier || '',
+                        description: metadata.description || '',
+                        coverUrl: coverUrl
+                    }
+                };
+                
+                processedBooks.push(bookInfo);
+                console.log('📚 元数据解析完成:', bookInfo.metadata.title);
+                
+            } catch (parseError) {
+                console.error('📚 解析文件失败:', file.name, parseError);
+                showMessage(`解析文件 ${file.name} 失败: ${parseError.message}`, 'error');
+            }
         }
         
-        // 发送到后端API
+        if (processedBooks.length === 0) {
+            throw new Error('没有成功解析的EPUB文件');
+        }
+        
+        // 第二步：上传到后端
         console.log('📚 上传文件到后端...');
+        const formData = new FormData();
+        
+        // 添加文件和元数据
+        processedBooks.forEach((bookInfo, index) => {
+            formData.append('files', bookInfo.file);
+            formData.append(`metadata_${index}`, JSON.stringify(bookInfo.metadata));
+        });
+        
         const response = await fetch('/api/upload', {
             method: 'POST',
             body: formData
@@ -109,13 +162,17 @@ async function handleFileImport(event) {
         console.log('📚 后端响应:', result);
         
         if (result.success) {
-            // 添加到导入书籍列表
-            for (const book of result.books) {
+            // 第三步：添加到本地书架（使用前端解析的元数据）
+            for (let i = 0; i < result.books.length; i++) {
+                const serverBook = result.books[i];
+                const localBook = processedBooks[i];
+                
                 importedBooks.push({
-                    id: book.id,
-                    name: book.filename,
-                    title: book.title,
+                    id: serverBook.id,
+                    name: localBook.filename,
+                    metadata: localBook.metadata, // 使用前端解析的完整元数据
                     addedDate: new Date().toISOString(),
+                    size: localBook.file.size,
                     type: 'imported'
                 });
             }
@@ -123,18 +180,18 @@ async function handleFileImport(event) {
             // 保存到本地存储
             saveBooksToStorage();
             
-            // 重新渲染
+            // 重新渲染（现在会显示真实的书名、作者）
             renderBooks();
             
             // 显示成功消息
-            showMessage(result.message, 'success');
+            showMessage(`成功添加 ${result.books.length} 本书籍到书架`, 'success');
         } else {
             throw new Error(result.message || '上传失败');
         }
         
     } catch (error) {
-        console.error('📚 文件上传失败:', error);
-        showMessage(`文件上传失败: ${error.message}`, 'error');
+        console.error('📚 文件处理失败:', error);
+        showMessage(`文件处理失败: ${error.message}`, 'error');
     } finally {
         // 隐藏加载提示
         hideLoading();
@@ -431,56 +488,58 @@ function loadBooksFromStorage() {
     }
 }
 
-// 清理无效的书籍数据（基于数据合理性检查）
-function cleanupInvalidBooks() {
+// 清理无效的书籍数据（向后端验证bookId）
+async function cleanupInvalidBooks() {
     console.log('📚 开始清理无效的书籍数据...');
     
+    if (importedBooks.length === 0) {
+        console.log('📚 没有导入的书籍需要验证');
+        return;
+    }
+    
     let cleanedCount = 0;
-    const now = Date.now();
-    const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000); // 一周前
-
-    // 检查导入书籍数据的合理性
-    const validBooks = importedBooks.filter(book => {
-        // 检查必要字段
-        if (!book.id || !book.name || !book.addedDate) {
-            console.log('📚 清理缺少必要字段的书籍:', book.name || '未知');
+    const validBooks = [];
+    
+    // 向后端验证每个bookId是否还存在
+    for (const book of importedBooks) {
+        try {
+            console.log('📚 验证书籍:', book.name, book.id);
+            
+            // 发送HEAD请求检查bookId是否存在
+            const response = await fetch(`/api/book/${encodeURIComponent(book.id)}`, {
+                method: 'HEAD'
+            });
+            
+            if (response.ok) {
+                // bookId有效，保留
+                validBooks.push(book);
+                console.log('📚 书籍有效:', book.name);
+            } else {
+                // bookId无效，清理
+                console.log('📚 清理无效书籍:', book.name, `(${response.status})`);
+                cleanedCount++;
+            }
+            
+        } catch (error) {
+            // 网络错误或其他问题，也清理掉
+            console.log('📚 清理无法验证的书籍:', book.name, error.message);
             cleanedCount++;
-            return false;
         }
-
-        // 检查添加时间（清理超过一周的旧数据，因为服务器重启会丢失）
-        const addedTime = new Date(book.addedDate).getTime();
-        if (isNaN(addedTime) || addedTime < oneWeekAgo) {
-            console.log('📚 清理过期的书籍数据:', book.name);
-            cleanedCount++;
-            return false;
-        }
-
-        return true;
-    });
-
-    // 清理最近阅读记录
+    }
+    
+    // 清理最近阅读记录中的无效项目
     const validRecentBooks = recentBooks.filter(recentBook => {
         if (recentBook.type === 'preset') {
             // 预设书籍保留
             return true;
         } else if (recentBook.type === 'imported') {
-            // 检查对应的导入书籍是否还存在
+            // 检查对应的导入书籍是否还有效
             const bookExists = validBooks.some(book => book.id === recentBook.id);
             if (!bookExists) {
                 console.log('📚 清理无效的最近阅读记录:', recentBook.name);
                 cleanedCount++;
                 return false;
             }
-
-            // 检查最近阅读时间（清理超过一周的记录）
-            const lastReadTime = new Date(recentBook.lastRead).getTime();
-            if (isNaN(lastReadTime) || lastReadTime < oneWeekAgo) {
-                console.log('📚 清理过期的最近阅读记录:', recentBook.name);
-                cleanedCount++;
-                return false;
-            }
-
             return true;
         }
         return false;
@@ -501,7 +560,7 @@ function cleanupInvalidBooks() {
     console.log(`📚 清理完成，共清理了 ${cleanedCount} 个无效项目`);
     
     if (cleanedCount > 0) {
-        showMessage(`已自动清理 ${cleanedCount} 个过期的书籍记录`, 'success');
+        showMessage(`已自动清理 ${cleanedCount} 个失效的书籍记录`, 'success');
     }
 }
 
