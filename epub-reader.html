@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title></title>
 
+    <!-- 禁用缓存 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <!-- PWA 相关标签 -->
     <meta name="description" content="一个现代化的EPUB电子书阅读器，支持日语词典查询功能">
     <meta name="theme-color" content="#ffffff">
@@ -30,14 +35,14 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/icon-16x16.png">
 
     <!-- 引入样式文件 -->
-    <link rel="stylesheet" href="assets/css/epub-reader.css">
+    <link rel="stylesheet" href="assets/css/epub-reader.css?v=" id="mainCSS">
 
     <!-- 引入JavaScript库 -->
-    <script src="assets/js/jszip.min.js"></script>
-    <script src="assets/js/epub.min.js"></script>
+    <script src="assets/js/jszip.min.js?v=" id="jszipJS"></script>
+    <script src="assets/js/epub.min.js?v=" id="epubJS"></script>
 
     <!-- 引入词典功能 -->
-    <script src="assets/js/dictionary.js"></script>
+    <script src="assets/js/dictionary.js?v=" id="dictJS"></script>
 </head>
 
 <body>
@@ -186,12 +191,31 @@
         </div>
     </div>
 
-    <!-- 引入外部JavaScript库 -->
-    <script src="assets/js/jszip.min.js"></script>
-    <script src="assets/js/epub.min.js"></script>
-
     <!-- 引入主要业务逻辑 -->
-    <script src="assets/js/epub-reader.js"></script>
+    <script src="assets/js/epub-reader.js?v=" id="mainJS"></script>
+
+    <!-- 缓存破坏脚本 -->
+    <script>
+        // 动态设置版本号来破坏缓存
+        const version = Date.now();
+        const links = [
+            { id: 'mainCSS', attr: 'href' },
+            { id: 'jszipJS', attr: 'src' },
+            { id: 'epubJS', attr: 'src' },
+            { id: 'dictJS', attr: 'src' },
+            { id: 'mainJS', attr: 'src' }
+        ];
+
+        links.forEach(link => {
+            const element = document.getElementById(link.id);
+            if (element) {
+                const url = element.getAttribute(link.attr);
+                element.setAttribute(link.attr, url + version);
+            }
+        });
+
+        console.log('🔄 缓存破坏完成，版本号:', version);
+    </script>
 
     <!-- PWA Service Worker 注册 -->
     <script>
@@ -201,7 +225,7 @@
                 navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
                         console.log('Service Worker 注册成功:', registration.scope);
-                        
+
                         // 检查更新
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
@@ -227,7 +251,7 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            
+
             // 显示安装提示
             const installButton = document.createElement('button');
             installButton.textContent = '安装应用';
@@ -244,7 +268,7 @@
                 z-index: 10000;
                 font-size: 14px;
             `;
-            
+
             installButton.addEventListener('click', () => {
                 installButton.style.display = 'none';
                 deferredPrompt.prompt();
@@ -257,7 +281,7 @@
                     deferredPrompt = null;
                 });
             });
-            
+
             document.body.appendChild(installButton);
         });
     </script>

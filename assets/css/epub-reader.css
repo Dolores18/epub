@@ -227,8 +227,8 @@ body {
 #viewer.vertical-rl div {
     text-align: justify;
     line-height: 2.0;
-    text-orientation: mixed;
-    -webkit-text-orientation: mixed;
+    text-orientation: upright !important;
+    -webkit-text-orientation: upright !important;
 }
 
 /* 竖排时的标点符号和数字处理 */

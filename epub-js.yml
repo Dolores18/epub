@@ -1,0 +1,61 @@
+调试 - metadata所有属性:
+epub-reader.js:1256   title: 三日間の幸福 (メディアワークス文庫)
+epub-reader.js:1256   creator: 三秋 縋
+epub-reader.js:1256   description: 
+epub-reader.js:1256   pubdate: 2014-11-19T13:00:00+00:00
+epub-reader.js:1256   publisher: 株式会社KADOKAWA
+epub-reader.js:1256   identifier: 41f08dd3-1150-458a-99f1-0e067e4674a6
+epub-reader.js:1256   language: ja
+epub-reader.js:1256   rights: 
+epub-reader.js:1256   modified_date: 
+epub-reader.js:1256   layout: 
+epub-reader.js:1256   orientation: 
+epub-reader.js:1256   flow: 
+epub-reader.js:1256   viewport: 
+epub-reader.js:1256   media_active_class: 
+epub-reader.js:1256   spread: 
+epub-reader.js:1256   direction: rtl
+epub-reader.js:1259 📖 调试 - metadata.meta: undefined
+epub-reader.js:1276 📖 调试 - spine所有属性:
+epub-reader.js:1278   spine.0: {idref: 'titlepage', linear: 'yes', properties: Array(0), index: 0, cfiBase: '/6/2[titlepage]', …}
+epub-reader.js:1278   spine.1: {idref: 'id16', linear: 'yes', properties: Array(0), index: 1, cfiBase: '/6/4[id16]', …}
+epub-reader.js:1278   spine.2: {idref: 'id17', linear: 'yes', properties: Array(0), index: 2, cfiBase: '/6/6[id17]', …}
+epub-reader.js:1278   spine.3: {idref: 'id18', linear: 'yes', properties: Array(0), index: 3, cfiBase: '/6/8[id18]', …}
+epub-reader.js:1278   spine.4: {idref: 'id19', linear: 'yes', properties: Array(0), index: 4, cfiBase: '/6/10[id19]', …}
+epub-reader.js:1278   spine.5: {idref: 'id20', linear: 'yes', properties: Array(0), index: 5, cfiBase: '/6/12[id20]', …}
+epub-reader.js:1278   spine.6: {idref: 'id21', linear: 'yes', properties: Array(0), index: 6, cfiBase: '/6/14[id21]', …}
+epub-reader.js:1278   spine.7: {idref: 'id22', linear: 'yes', properties: Array(0), index: 7, cfiBase: '/6/16[id22]', …}
+epub-reader.js:1278   spine.8: {idref: 'id23', linear: 'yes', properties: Array(0), index: 8, cfiBase: '/6/18[id23]', …}
+epub-reader.js:1278   spine.9: {idref: 'id24', linear: 'yes', properties: Array(0), index: 9, cfiBase: '/6/20[id24]', …}
+epub-reader.js:1278   spine.10: {idref: 'id25', linear: 'yes', properties: Array(0), index: 10, cfiBase: '/6/22[id25]', …}
+epub-reader.js:1278   spine.11: {idref: 'id26', linear: 'yes', properties: Array(0), index: 11, cfiBase: '/6/24[id26]', …}
+epub-reader.js:1278   spine.12: {idref: 'id27', linear: 'yes', properties: Array(0), index: 12, cfiBase: '/6/26[id27]', …}
+epub-reader.js:1278   spine.13: {idref: 'id28', linear: 'yes', properties: Array(0), index: 13, cfiBase: '/6/28[id28]', …}
+epub-reader.js:1278   spine.14: {idref: 'id29', linear: 'yes', properties: Array(0), index: 14, cfiBase: '/6/30[id29]', …}
+epub-reader.js:1278   spine.15: {idref: 'id30', linear: 'yes', properties: Array(0), index: 15, cfiBase: '/6/32[id30]', …}
+epub-reader.js:1278   spine.16: {idref: 'id31', linear: 'yes', properties: Array(0), index: 16, cfiBase: '/6/34[id31]', …}
+epub-reader.js:1278   spine.17: {idref: 'id32', linear: 'yes', properties: Array(0), index: 17, cfiBase: '/6/36[id32]', …}
+epub-reader.js:1278   spine.18: {idref: 'id33', linear: 'yes', properties: Array(0), index: 18, cfiBase: '/6/38[id33]', …}
+epub-reader.js:1278   spine.19: {idref: 'id34', linear: 'yes', properties: Array(0), index: 19, cfiBase: '/6/40[id34]', …}
+epub-reader.js:1278   spine.20: {idref: 'id35', linear: 'yes', properties: Array(0), index: 20, cfiBase: '/6/42[id35]', …}
+epub-reader.js:1278   spine.21: {idref: 'id36', linear: 'yes', properties: Array(0), index: 21, cfiBase: '/6/44[id36]', …}
+epub-reader.js:1278   spine.22: {idref: 'id37', linear: 'yes', properties: Array(0), index: 22, cfiBase: '/6/46[id37]', …}
+epub-reader.js:1278   spine.23: {idref: 'id38', linear: 'yes', properties: Array(0), index: 23, cfiBase: '/6/48[id38]', …}
+epub-reader.js:1278   spine.24: {idref: 'id39', linear: 'yes', properties: Array(0), index: 24, cfiBase: '/6/50[id39]', …}
+epub-reader.js:1285 📖 调试 - book.spine所有属性:
+epub-reader.js:1287   book.spine.spineItems: (25) [f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f, f]
+epub-reader.js:1287   book.spine.spineByHref: {titlepage.xhtml: 0, text/part0000.html: 1, text/part0001.html: 2, text/part0002.html: 3, text/part0003.html: 4, …}
+epub-reader.js:1287   book.spine.spineById: {titlepage: 0, id16: 1, id17: 2, id18: 3, id19: 4, …}
+epub-reader.js:1287   book.spine.hooks: {serialize: e.a, content: e.a}
+epub-reader.js:1287   book.spine.epubcfi: r {str: '', base: {…}, spinePos: 0, range: false, path: {…}, …}
+epub-reader.js:1287   book.spine.loaded: true
+epub-reader.js:1287   book.spine.items: (25) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+epub-reader.js:1287   book.spine.manifest: {titlepage: {…}, id16: {…}, id17: {…}, id18: {…}, id19: {…}, …}
+epub-reader.js:1287   book.spine.spineNodeIndex: 2
+epub-reader.js:1287   book.spine.baseUrl: 
+epub-reader.js:1287   book.spine.length: 25
+epub-reader.js:1293 📖 调试 - rendition对象: b {settings: {…}, book: H, hooks: {…}, themes: f, annotations: g, …}
+epub-reader.js:1294 📖 调试 - rendition.settings: {width: '100%', height: '100%', ignoreClass: '', manager: 'default', view: 'iframe', …}
+epub-reader.js:1300 📖 调试 - 当前渲染内容: [f]
+epub-reader.js:1304 📖 调试 - 检测到的writingMode: horizontal-tb
+epub-reader.js:1345 📖 使用横排样式
