@@ -214,12 +214,16 @@ body {
     -webkit-writing-mode: vertical-rl;
     -ms-writing-mode: tb-rl;
     direction: rtl;
+    max-inline-size: none;
+    max-block-size: calc(100vw - 200px); /* 默认值，左右各减100px */
 }
 
 #viewer.vertical-rl iframe {
     writing-mode: vertical-rl;
     -webkit-writing-mode: vertical-rl;
     -ms-writing-mode: tb-rl;
+    max-inline-size: none;
+    max-block-size: calc(100vw - 200px);
 }
 
 /* 竖排时的文本方向调整 */
@@ -229,6 +233,8 @@ body {
     line-height: 2.0;
     text-orientation: upright !important;
     -webkit-text-orientation: upright !important;
+    max-inline-size: none !important;
+    max-block-size: calc(100vw - 200px) !important;
 }
 
 /* 竖排时的标点符号和数字处理 */

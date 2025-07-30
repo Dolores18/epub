@@ -43,6 +43,188 @@ let currentPage = 0;  // 当前页面索引
 let totalPages = 0;   // 总页数
 let pageHeight = 0;   // 页面高度
 
+// 统一的rendition创建函数，在创建时就应用垂直文本样式
+async function createRenditionWithVerticalSupport(book, viewerId, forceVertical = null) {
+    console.log('📖 开始创建rendition，检测书写模式...');
+
+    let isVertical = forceVertical;
+
+    // 如果没有强制指定，则自动检测
+    if (isVertical === null) {
+        try {
+            // 等待book加载完成
+            await book.ready;
+
+            // 检测书写模式
+            if (book.package && book.package.metadata && book.package.metadata.direction === 'rtl') {
+                isVertical = true;
+                console.log('✅ 自动检测到竖排文本 (direction: rtl)');
+            } else {
+                isVertical = false;
+                console.log('❌ 自动检测到横排文本或无direction信息');
+            }
+        } catch (error) {
+            console.warn('⚠️ 书写模式检测失败，使用横排模式:', error);
+            isVertical = false;
+        }
+    }
+
+    console.log('📖 最终书写模式:', isVertical ? '竖排' : '横排');
+
+    // 为viewer添加相应的样式类
+    const viewer = document.getElementById(viewerId);
+    if (viewer) {
+        if (isVertical) {
+            viewer.classList.add('vertical-rl');
+            console.log('📖 已为viewer添加vertical-rl类');
+        } else {
+            viewer.classList.remove('vertical-rl');
+            console.log('📖 已移除viewer的vertical-rl类');
+        }
+    }
+
+    // 创建rendition配置
+    const renditionConfig = {
+        width: '100%',
+        height: '100%',
+        spread: 'none',
+        allowScriptedContent: true,
+        flow: 'paginated',
+        manager: 'default'
+    };
+
+    console.log('📖 创建rendition，配置:', renditionConfig);
+    const newRendition = book.renderTo(viewerId, renditionConfig);
+
+    // 在创建后立即应用垂直文本样式（在display之前）
+    if (isVertical) {
+        console.log('📖 应用竖排主题（在display之前）');
+
+        // 计算当前窗口尺寸，为竖排设置合适的max-block-size
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        const maxBlockSize = Math.max(200, windowWidth - 200); // 左右各减去100px，最小200px
+
+        console.log('📖 窗口尺寸:', { width: windowWidth, height: windowHeight });
+        console.log('📖 计算的max-block-size:', maxBlockSize + 'px');
+
+        // 注册竖排主题
+        newRendition.themes.register('vertical-japanese', {
+            'html': {
+                'writing-mode': 'vertical-rl !important',
+                '-webkit-writing-mode': 'vertical-rl !important',
+                '-ms-writing-mode': 'tb-rl !important',
+                'text-orientation': 'upright !important',
+                '-webkit-text-orientation': 'upright !important',
+                'height': '100vh !important',
+                'width': '100vw !important',
+                'max-inline-size': 'none !important',
+                'max-block-size': maxBlockSize + 'px !important'
+            },
+            'body': {
+                'writing-mode': 'vertical-rl !important',
+                '-webkit-writing-mode': 'vertical-rl !important',
+                '-ms-writing-mode': 'tb-rl !important',
+                'text-orientation': 'upright !important',
+                '-webkit-text-orientation': 'upright !important',
+                'height': '100% !important',
+                'width': '100% !important',
+                'margin': '0 !important',
+                'padding': '20px !important',
+                'box-sizing': 'border-box !important',
+                'max-inline-size': 'none !important',
+                'max-block-size': maxBlockSize + 'px !important'
+            },
+            'p, div, span, h1, h2, h3, h4, h5, h6': {
+                'text-orientation': 'upright !important',
+                '-webkit-text-orientation': 'upright !important',
+                'line-height': '2.0 !important',
+                'max-inline-size': 'none !important',
+                'max-block-size': maxBlockSize + 'px !important'
+            },
+            'p': {
+                'text-align': 'justify !important',
+                'margin-bottom': '1em !important',
+                'max-inline-size': 'none !important',
+                'max-block-size': maxBlockSize + 'px !important'
+            }
+        });
+
+        // 选择并应用竖排主题
+        newRendition.themes.select('vertical-japanese');
+        console.log('📖 已选择vertical-japanese主题');
+
+        // 监听每个页面渲染，确保竖排样式被正确应用
+        newRendition.on('rendered', function(section) {
+            console.log('📖 页面渲染完成，重新应用竖排主题');
+            newRendition.themes.select('vertical-japanese');
+        });
+
+        // 监听窗口大小变化，动态调整max-block-size
+        const updateVerticalLayout = () => {
+            const newWindowWidth = window.innerWidth;
+            const newMaxBlockSize = Math.max(200, newWindowWidth - 200);
+            console.log('📖 窗口大小变化，更新max-block-size:', newMaxBlockSize + 'px');
+
+            // 重新注册主题以更新max-block-size
+            newRendition.themes.register('vertical-japanese', {
+                'html': {
+                    'writing-mode': 'vertical-rl !important',
+                    '-webkit-writing-mode': 'vertical-rl !important',
+                    '-ms-writing-mode': 'tb-rl !important',
+                    'text-orientation': 'upright !important',
+                    '-webkit-text-orientation': 'upright !important',
+                    'height': '100vh !important',
+                    'width': '100vw !important',
+                    'max-inline-size': 'none !important',
+                    'max-block-size': newMaxBlockSize + 'px !important'
+                },
+                'body': {
+                    'writing-mode': 'vertical-rl !important',
+                    '-webkit-writing-mode': 'vertical-rl !important',
+                    '-ms-writing-mode': 'tb-rl !important',
+                    'text-orientation': 'upright !important',
+                    '-webkit-text-orientation': 'upright !important',
+                    'height': '100% !important',
+                    'width': '100% !important',
+                    'margin': '0 !important',
+                    'padding': '20px !important',
+                    'box-sizing': 'border-box !important',
+                    'max-inline-size': 'none !important',
+                    'max-block-size': newMaxBlockSize + 'px !important'
+                },
+                'p, div, span, h1, h2, h3, h4, h5, h6': {
+                    'text-orientation': 'upright !important',
+                    '-webkit-text-orientation': 'upright !important',
+                    'line-height': '2.0 !important',
+                    'max-inline-size': 'none !important',
+                    'max-block-size': newMaxBlockSize + 'px !important'
+                },
+                'p': {
+                    'text-align': 'justify !important',
+                    'margin-bottom': '1em !important',
+                    'max-inline-size': 'none !important',
+                    'max-block-size': newMaxBlockSize + 'px !important'
+                }
+            });
+            newRendition.themes.select('vertical-japanese');
+        };
+
+        // 添加窗口大小变化监听器
+        window.addEventListener('resize', updateVerticalLayout);
+
+        // 将清理函数存储到rendition上，以便后续清理
+        newRendition._verticalLayoutCleanup = () => {
+            window.removeEventListener('resize', updateVerticalLayout);
+        };
+    } else {
+        console.log('📖 使用默认横排主题');
+    }
+
+    console.log('📖 rendition创建完成，书写模式已应用');
+    return newRendition;
+}
+
 // 根据语言获取字体设置
 function getFontFamilyByLanguage(language) {
     debugLog('检测到的语言:', language);
@@ -183,16 +365,9 @@ async function initReader(file = null) {
         try {
             debugLog('跳过 book.ready，直接创建渲染器...');
 
-            // 创建渲染器
+            // 创建渲染器（使用统一的创建方法）
             debugLog('创建渲染器...');
-            rendition = book.renderTo('viewer', {
-                width: '100%',
-                height: '100%',
-                spread: 'none',
-                allowScriptedContent: true,
-                flow: 'paginated',  // 使用分页模式，自动处理行截断
-                manager: 'default'  // 使用默认管理器
-            });
+            rendition = await createRenditionWithVerticalSupport(book, 'viewer');
 
             // 显示第一章
             debugLog('显示第一章...');
@@ -278,15 +453,8 @@ async function initReader(file = null) {
             await Promise.race([readyPromise, timeoutPromise]);
             debugLog('书籍元数据加载完成');
 
-            // 重新创建渲染器
-            rendition = book.renderTo('viewer', {
-                width: '100%',
-                height: '100%',
-                spread: 'none',
-                allowScriptedContent: true,
-                flow: 'paginated',  // 使用分页模式，自动处理行截断
-                manager: 'default'  // 使用默认管理器
-            });
+            // 重新创建渲染器（使用统一的创建方法）
+            rendition = await createRenditionWithVerticalSupport(book, 'viewer');
 
             await rendition.display();
 
@@ -1173,60 +1341,9 @@ async function loadBookFromAPI(bookId) {
             // 不修改rendition配置，保持默认的分页逻辑
         }
 
-        rendition = book.renderTo('viewer', renditionConfig);
-        console.log('📖 rendition配置:', renditionConfig);
-
-        // 根据检测结果设置相应主题（在display之前）
-        if (isVertical) {
-            console.log('📖 设置竖排主题');
-
-            // 注册竖排主题（确保应用到每个iframe内部）
-            rendition.themes.register('vertical-japanese', {
-                'html': {
-                    'writing-mode': 'vertical-rl !important',
-                    '-webkit-writing-mode': 'vertical-rl !important',
-                    '-ms-writing-mode': 'tb-rl !important',
-                    'text-orientation': 'upright !important',
-                    '-webkit-text-orientation': 'upright !important',
-                    'height': '100vh !important',
-                    'width': '100vw !important'
-                },
-                'body': {
-                    'writing-mode': 'vertical-rl !important',
-                    '-webkit-writing-mode': 'vertical-rl !important',
-                    '-ms-writing-mode': 'tb-rl !important',
-                    'text-orientation': 'upright !important',
-                    '-webkit-text-orientation': 'upright !important',
-                    'height': '100% !important',
-                    'width': '100% !important',
-                    'margin': '0 !important',
-                    'padding': '20px !important',
-                    'box-sizing': 'border-box !important'
-                },
-                'p, div, span, h1, h2, h3, h4, h5, h6': {
-                    'text-orientation': 'upright !important',
-                    '-webkit-text-orientation': 'upright !important',
-                    'line-height': '2.0 !important'
-                },
-                'p': {
-                    'text-align': 'justify !important',
-                    'margin-bottom': '1em !important'
-                }
-            });
-
-            // 选择并应用竖排主题
-            rendition.themes.select('vertical-japanese');
-            console.log('📖 已选择vertical-japanese主题');
-
-            // 监听每个页面渲染，确保竖排样式被正确应用
-            rendition.on('rendered', function(section) {
-                console.log('📖 页面渲染完成，重新应用竖排主题');
-                rendition.themes.select('vertical-japanese');
-            });
-        } else {
-            console.log('📖 使用默认横排主题');
-        }
-        console.log('📚 rendition创建成功');
+        // 使用统一的创建方法（在创建时就应用竖排样式）
+        rendition = await createRenditionWithVerticalSupport(book, 'viewer', isVertical);
+        console.log('� rendition创建成功，已应用书写模式');
 
         // 显示内容
         console.log('📚 开始显示内容...');
