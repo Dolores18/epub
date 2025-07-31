@@ -213,7 +213,7 @@ body {
     writing-mode: vertical-rl;
     -webkit-writing-mode: vertical-rl;
     -ms-writing-mode: tb-rl;
-    direction: rtl;
+    direction: ltr;
     max-inline-size: none;
     max-block-size: calc(100vw - 200px); /* 默认值，左右各减100px */
 }

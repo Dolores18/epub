@@ -109,11 +109,12 @@ async function createRenditionWithVerticalSupport(book, viewerId, forceVertical 
         console.log('📖 计算的max-block-size:', maxBlockSize + 'px');
 
         // 注册竖排主题
-        newRendition.themes.register('vertical-japanese', {
+        const verticalTheme = {
             'html': {
                 'writing-mode': 'vertical-rl !important',
                 '-webkit-writing-mode': 'vertical-rl !important',
                 '-ms-writing-mode': 'tb-rl !important',
+                'direction': 'ltr !important',
                 'text-orientation': 'upright !important',
                 '-webkit-text-orientation': 'upright !important',
                 'height': '100vh !important',
@@ -125,6 +126,7 @@ async function createRenditionWithVerticalSupport(book, viewerId, forceVertical 
                 'writing-mode': 'vertical-rl !important',
                 '-webkit-writing-mode': 'vertical-rl !important',
                 '-ms-writing-mode': 'tb-rl !important',
+                'direction': 'ltr !important',
                 'text-orientation': 'upright !important',
                 '-webkit-text-orientation': 'upright !important',
                 'height': '100% !important',
@@ -148,14 +150,17 @@ async function createRenditionWithVerticalSupport(book, viewerId, forceVertical 
                 'max-inline-size': 'none !important',
                 'max-block-size': maxBlockSize + 'px !important'
             }
-        });
+        };
+
+        console.log('📖 注册竖排主题，样式配置:', JSON.stringify(verticalTheme, null, 2));
+        newRendition.themes.register('vertical-japanese', verticalTheme);
 
         // 选择并应用竖排主题
         newRendition.themes.select('vertical-japanese');
         console.log('📖 已选择vertical-japanese主题');
 
         // 监听每个页面渲染，确保竖排样式被正确应用
-        newRendition.on('rendered', function(section) {
+        newRendition.on('rendered', function (section) {
             console.log('📖 页面渲染完成，重新应用竖排主题');
             newRendition.themes.select('vertical-japanese');
         });
@@ -167,11 +172,12 @@ async function createRenditionWithVerticalSupport(book, viewerId, forceVertical 
             console.log('📖 窗口大小变化，更新max-block-size:', newMaxBlockSize + 'px');
 
             // 重新注册主题以更新max-block-size
-            newRendition.themes.register('vertical-japanese', {
+            const updatedVerticalTheme = {
                 'html': {
                     'writing-mode': 'vertical-rl !important',
                     '-webkit-writing-mode': 'vertical-rl !important',
                     '-ms-writing-mode': 'tb-rl !important',
+                    'direction': 'ltr !important',
                     'text-orientation': 'upright !important',
                     '-webkit-text-orientation': 'upright !important',
                     'height': '100vh !important',
@@ -183,6 +189,7 @@ async function createRenditionWithVerticalSupport(book, viewerId, forceVertical 
                     'writing-mode': 'vertical-rl !important',
                     '-webkit-writing-mode': 'vertical-rl !important',
                     '-ms-writing-mode': 'tb-rl !important',
+                    'direction': 'ltr !important',
                     'text-orientation': 'upright !important',
                     '-webkit-text-orientation': 'upright !important',
                     'height': '100% !important',
@@ -206,7 +213,9 @@ async function createRenditionWithVerticalSupport(book, viewerId, forceVertical 
                     'max-inline-size': 'none !important',
                     'max-block-size': newMaxBlockSize + 'px !important'
                 }
-            });
+            };
+            console.log('📖 窗口大小变化，重新注册主题，样式配置:', JSON.stringify(updatedVerticalTheme, null, 2));
+            newRendition.themes.register('vertical-japanese', updatedVerticalTheme);
             newRendition.themes.select('vertical-japanese');
         };
 
@@ -1460,9 +1469,9 @@ async function detectWritingModeFromEpub() {
             return {
                 body: {
                     'writing-mode': 'vertical-rl !important',
-                    '-webkit-writing-mode': 'vertical-rl !important',
+                    'webkit-writing-mode': 'vertical-rl !important',
                     '-ms-writing-mode': 'tb-rl !important',
-                    'direction': 'rtl !important',
+                    'direction': 'ltr !important',
                     'text-orientation': 'upright !important',
                     '-webkit-text-orientation': 'upright !important'
                 },
