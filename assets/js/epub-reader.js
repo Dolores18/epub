@@ -43,194 +43,32 @@ let currentPage = 0;  // 当前页面索引
 let totalPages = 0;   // 总页数
 let pageHeight = 0;   // 页面高度
 
-// 统一的rendition创建函数，在创建时就应用垂直文本样式
-async function createRenditionWithVerticalSupport(book, viewerId, forceVertical = null) {
-    console.log('📖 开始创建rendition，检测书写模式...');
+// 使用epub-fixed.js的增强功能创建rendition
+function createRenditionWithFixedSupport(book, viewerId, options = {}) {
+    console.log('📶 使用epub-fixed.js创建rendition...');
 
-    let isVertical = forceVertical;
-
-    // 如果没有强制指定，则自动检测
-    if (isVertical === null) {
-        try {
-            // 等待book加载完成
-            await book.ready;
-
-            // 检测书写模式
-            if (book.package && book.package.metadata && book.package.metadata.direction === 'rtl') {
-                isVertical = true;
-                console.log('✅ 自动检测到竖排文本 (direction: rtl)');
-            } else {
-                isVertical = false;
-                console.log('❌ 自动检测到横排文本或无direction信息');
-            }
-        } catch (error) {
-            console.warn('⚠️ 书写模式检测失败，使用横排模式:', error);
-            isVertical = false;
-        }
-    }
-
-    console.log('📖 最终书写模式:', isVertical ? '竖排' : '横排');
-
-    // 为viewer添加相应的样式类
-    const viewer = document.getElementById(viewerId);
-    if (viewer) {
-        if (isVertical) {
-            viewer.classList.add('vertical-rl');
-            console.log('📖 已为viewer添加vertical-rl类');
-        } else {
-            viewer.classList.remove('vertical-rl');
-            console.log('📖 已移除viewer的vertical-rl类');
-        }
-    }
-
-    // 创建rendition配置
-    const renditionConfig = {
+    // 默认配置
+    const defaultConfig = {
         width: '100%',
         height: '100%',
         spread: 'none',
         allowScriptedContent: true,
         flow: 'paginated',
-        manager: 'default'
+        manager: 'default',
+        // 使用epub-fixed.js的增强功能
+        direction: 'ltr',  // 强制设置为左到右，覆盖EPUB元数据
+        writingMode: 'horizontal-tb'  // 强制设置为横排模式
     };
 
-    console.log('📖 创建rendition，配置:', renditionConfig);
+    // 合并用户配置
+    const renditionConfig = { ...defaultConfig, ...options };
+
+    console.log('📶 rendition配置:', renditionConfig);
+
+    // 创建rendition，使用epub-fixed.js的增强功能
     const newRendition = book.renderTo(viewerId, renditionConfig);
 
-    // 在创建后立即应用垂直文本样式（在display之前）
-    if (isVertical) {
-        console.log('📖 应用竖排主题（在display之前）');
-
-        // 计算当前窗口尺寸，为竖排设置合适的max-block-size
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        const maxBlockSize = Math.max(200, windowWidth - 200); // 左右各减去100px，最小200px
-
-        console.log('📖 窗口尺寸:', { width: windowWidth, height: windowHeight });
-        console.log('📖 计算的max-block-size:', maxBlockSize + 'px');
-
-        // 注册竖排主题
-        const verticalTheme = {
-            'html': {
-                'writing-mode': 'vertical-rl !important',
-                '-webkit-writing-mode': 'vertical-rl !important',
-                '-ms-writing-mode': 'tb-rl !important',
-                'direction': 'ltr !important',
-                'text-orientation': 'upright !important',
-                '-webkit-text-orientation': 'upright !important',
-                'height': '100vh !important',
-                'width': '100vw !important',
-                'max-inline-size': 'none !important',
-                'max-block-size': maxBlockSize + 'px !important'
-            },
-            'body': {
-                'writing-mode': 'vertical-rl !important',
-                '-webkit-writing-mode': 'vertical-rl !important',
-                '-ms-writing-mode': 'tb-rl !important',
-                'direction': 'ltr !important',
-                'text-orientation': 'upright !important',
-                '-webkit-text-orientation': 'upright !important',
-                'height': '100% !important',
-                'width': '100% !important',
-                'margin': '0 !important',
-                'padding': '20px !important',
-                'box-sizing': 'border-box !important',
-                'max-inline-size': 'none !important',
-                'max-block-size': maxBlockSize + 'px !important'
-            },
-            'p, div, span, h1, h2, h3, h4, h5, h6': {
-                'text-orientation': 'upright !important',
-                '-webkit-text-orientation': 'upright !important',
-                'line-height': '2.0 !important',
-                'max-inline-size': 'none !important',
-                'max-block-size': maxBlockSize + 'px !important'
-            },
-            'p': {
-                'text-align': 'justify !important',
-                'margin-bottom': '1em !important',
-                'max-inline-size': 'none !important',
-                'max-block-size': maxBlockSize + 'px !important'
-            }
-        };
-
-        console.log('📖 注册竖排主题，样式配置:', JSON.stringify(verticalTheme, null, 2));
-        newRendition.themes.register('vertical-japanese', verticalTheme);
-
-        // 选择并应用竖排主题
-        newRendition.themes.select('vertical-japanese');
-        console.log('📖 已选择vertical-japanese主题');
-
-        // 监听每个页面渲染，确保竖排样式被正确应用
-        newRendition.on('rendered', function (section) {
-            console.log('📖 页面渲染完成，重新应用竖排主题');
-            newRendition.themes.select('vertical-japanese');
-        });
-
-        // 监听窗口大小变化，动态调整max-block-size
-        const updateVerticalLayout = () => {
-            const newWindowWidth = window.innerWidth;
-            const newMaxBlockSize = Math.max(200, newWindowWidth - 200);
-            console.log('📖 窗口大小变化，更新max-block-size:', newMaxBlockSize + 'px');
-
-            // 重新注册主题以更新max-block-size
-            const updatedVerticalTheme = {
-                'html': {
-                    'writing-mode': 'vertical-rl !important',
-                    '-webkit-writing-mode': 'vertical-rl !important',
-                    '-ms-writing-mode': 'tb-rl !important',
-                    'direction': 'ltr !important',
-                    'text-orientation': 'upright !important',
-                    '-webkit-text-orientation': 'upright !important',
-                    'height': '100vh !important',
-                    'width': '100vw !important',
-                    'max-inline-size': 'none !important',
-                    'max-block-size': newMaxBlockSize + 'px !important'
-                },
-                'body': {
-                    'writing-mode': 'vertical-rl !important',
-                    '-webkit-writing-mode': 'vertical-rl !important',
-                    '-ms-writing-mode': 'tb-rl !important',
-                    'direction': 'ltr !important',
-                    'text-orientation': 'upright !important',
-                    '-webkit-text-orientation': 'upright !important',
-                    'height': '100% !important',
-                    'width': '100% !important',
-                    'margin': '0 !important',
-                    'padding': '20px !important',
-                    'box-sizing': 'border-box !important',
-                    'max-inline-size': 'none !important',
-                    'max-block-size': newMaxBlockSize + 'px !important'
-                },
-                'p, div, span, h1, h2, h3, h4, h5, h6': {
-                    'text-orientation': 'upright !important',
-                    '-webkit-text-orientation': 'upright !important',
-                    'line-height': '2.0 !important',
-                    'max-inline-size': 'none !important',
-                    'max-block-size': newMaxBlockSize + 'px !important'
-                },
-                'p': {
-                    'text-align': 'justify !important',
-                    'margin-bottom': '1em !important',
-                    'max-inline-size': 'none !important',
-                    'max-block-size': newMaxBlockSize + 'px !important'
-                }
-            };
-            console.log('📖 窗口大小变化，重新注册主题，样式配置:', JSON.stringify(updatedVerticalTheme, null, 2));
-            newRendition.themes.register('vertical-japanese', updatedVerticalTheme);
-            newRendition.themes.select('vertical-japanese');
-        };
-
-        // 添加窗口大小变化监听器
-        window.addEventListener('resize', updateVerticalLayout);
-
-        // 将清理函数存储到rendition上，以便后续清理
-        newRendition._verticalLayoutCleanup = () => {
-            window.removeEventListener('resize', updateVerticalLayout);
-        };
-    } else {
-        console.log('📖 使用默认横排主题');
-    }
-
-    console.log('📖 rendition创建完成，书写模式已应用');
+    console.log('📶 rendition创建完成，已应用epub-fixed.js增强功能');
     return newRendition;
 }
 
@@ -374,9 +212,9 @@ async function initReader(file = null) {
         try {
             debugLog('跳过 book.ready，直接创建渲染器...');
 
-            // 创建渲染器（使用统一的创建方法）
+            // 创建渲染器（使用epub-fixed.js增强功能）
             debugLog('创建渲染器...');
-            rendition = await createRenditionWithVerticalSupport(book, 'viewer');
+            rendition = createRenditionWithFixedSupport(book, 'viewer');
 
             // 显示第一章
             debugLog('显示第一章...');
@@ -462,8 +300,8 @@ async function initReader(file = null) {
             await Promise.race([readyPromise, timeoutPromise]);
             debugLog('书籍元数据加载完成');
 
-            // 重新创建渲染器（使用统一的创建方法）
-            rendition = await createRenditionWithVerticalSupport(book, 'viewer');
+            // 重新创建渲染器（使用epub-fixed.js增强功能）
+            rendition = createRenditionWithFixedSupport(book, 'viewer');
 
             await rendition.display();
 
@@ -1306,34 +1144,6 @@ async function loadBookFromAPI(bookId) {
         book = ePub(arrayBuffer);
         console.log('📚 book对象创建成功');
 
-        // 等待book加载完成后再检测书写模式
-        await book.ready;
-        console.log('🔍 book加载完成，开始检测书写模式 v2.0...');
-        console.log('🔍 book.package:', book.package);
-        console.log('🔍 book.package.metadata:', book.package?.metadata);
-        console.log('🔍 direction值:', book.package?.metadata?.direction);
-
-        let isVertical = false;
-        if (book.package && book.package.metadata && book.package.metadata.direction === 'rtl') {
-            isVertical = true;
-            console.log('✅ 检测到竖排文本 (direction: rtl)');
-        } else {
-            console.log('❌ 检测到横排文本或无direction信息');
-        }
-        console.log('🔍 isVertical结果:', isVertical);
-
-        // 为viewer添加相应的样式类（在创建rendition之前）
-        const viewer = document.getElementById('viewer');
-        if (viewer) {
-            if (isVertical) {
-                viewer.classList.add('vertical-rl');
-                console.log('📖 已为viewer添加vertical-rl类');
-            } else {
-                viewer.classList.remove('vertical-rl');
-                console.log('📖 已移除viewer的vertical-rl类');
-            }
-        }
-
         // 根据书写模式创建渲染器
         const renditionConfig = {
             width: '100%',
@@ -1344,15 +1154,9 @@ async function loadBookFromAPI(bookId) {
             manager: 'default'
         };
 
-        // 如果是竖排，不修改rendition配置，只通过CSS主题实现
-        if (isVertical) {
-            console.log('📖 竖排模式：仅通过CSS主题实现，不修改rendition配置');
-            // 不修改rendition配置，保持默认的分页逻辑
-        }
-
-        // 使用统一的创建方法（在创建时就应用竖排样式）
-        rendition = await createRenditionWithVerticalSupport(book, 'viewer', isVertical);
-        console.log('� rendition创建成功，已应用书写模式');
+        // 使用epub-fixed.js增强功能创建渲染器
+        rendition = createRenditionWithFixedSupport(book, 'viewer');
+        console.log('📶 rendition创建成功，已应用书写模式');
 
         // 显示内容
         console.log('📚 开始显示内容...');
@@ -1404,156 +1208,6 @@ async function loadBookFromAPI(bookId) {
 // 页面卸载时保存设置
 window.addEventListener('beforeunload', saveMarginSettings);
 
-// 简化的书写模式检测（仅用于调试）
-function detectWritingModeForDebug() {
-    if (!book || !book.package || !book.package.metadata) {
-        return false;
-    }
-    return book.package.metadata.direction === 'rtl';
-}
 
 
 
-// 删除了复杂的检测函数，现在在渲染前直接处理
-
-// 直接从 EPUB 文件检测书写模式
-async function detectWritingModeFromEpub() {
-    try {
-        console.log('📖 尝试直接从EPUB文件检测书写模式...');
-
-        // 获取当前书籍的 ArrayBuffer
-        if (!book.archive) {
-            console.warn('📖 无法访问EPUB文件内容');
-            return detectWritingModeFromEpubJS();
-        }
-
-        // 查找 OPF 文件
-        const containerXml = await book.archive.getText('META-INF/container.xml');
-        console.log('📖 container.xml:', containerXml);
-
-        // 解析 container.xml 找到 OPF 文件路径
-        const parser = new DOMParser();
-        const containerDoc = parser.parseFromString(containerXml, 'text/xml');
-        const rootfile = containerDoc.querySelector('rootfile');
-        const opfPath = rootfile ? rootfile.getAttribute('full-path') : 'content.opf';
-
-        console.log('📖 OPF文件路径:', opfPath);
-
-        // 读取 OPF 文件
-        const opfContent = await book.archive.getText(opfPath);
-        console.log('📖 OPF内容:', opfContent);
-
-        // 解析 OPF 文件
-        const opfDoc = parser.parseFromString(opfContent, 'text/xml');
-
-        // 查找 primary-writing-mode
-        const writingModeMeta = opfDoc.querySelector('meta[name="primary-writing-mode"]');
-        const writingMode = writingModeMeta ? writingModeMeta.getAttribute('content') : null;
-
-        // 查找 page-progression-direction
-        const spine = opfDoc.querySelector('spine');
-        const pageProgression = spine ? spine.getAttribute('page-progression-direction') : null;
-
-        console.log('📖 直接解析 - 书写模式:', writingMode);
-        console.log('📖 直接解析 - 页面方向:', pageProgression);
-
-        // 应用竖排样式
-        if (writingMode === 'vertical-rl' || pageProgression === 'rtl') {
-            console.log('📖 检测到竖排，应用竖排样式（包含text-orientation: upright修复）');
-
-            const viewer = document.getElementById('viewer');
-            if (viewer) {
-                viewer.classList.add('vertical-rl');
-            }
-
-            return {
-                body: {
-                    'writing-mode': 'vertical-rl !important',
-                    'webkit-writing-mode': 'vertical-rl !important',
-                    '-ms-writing-mode': 'tb-rl !important',
-                    'direction': 'ltr !important',
-                    'text-orientation': 'upright !important',
-                    '-webkit-text-orientation': 'upright !important'
-                },
-                all: {
-                    'writing-mode': 'inherit !important',
-                    '-webkit-writing-mode': 'inherit !important',
-                    'text-orientation': 'upright !important',
-                    '-webkit-text-orientation': 'upright !important'
-                },
-                text: {
-                    'text-orientation': 'upright !important',
-                    '-webkit-text-orientation': 'upright !important',
-                    'line-height': '2.0 !important',
-                    'text-align': 'justify !important'
-                }
-            };
-        } else {
-            console.log('📖 使用横排样式');
-            return { body: {}, all: {}, text: {} };
-        }
-
-    } catch (error) {
-        console.error('直接解析EPUB失败:', error);
-        return detectWritingModeFromEpubJS();
-    }
-}
-
-// 检测并应用书写模式（保留用于调试）
-function detectAndApplyWritingMode() {
-    if (!book) {
-        console.warn('书籍未加载，无法检测书写模式');
-        return;
-    }
-
-    try {
-        // 检查EPUB元数据中的书写模式
-        const metadata = book.package.metadata;
-        const spine = book.package.spine;
-
-        // 查找primary-writing-mode元数据
-        let writingMode = null;
-        let pageProgression = null;
-
-        // 检查metadata中的writing-mode
-        if (book.package.metadata && book.package.metadata.meta) {
-            const metas = Array.isArray(book.package.metadata.meta)
-                ? book.package.metadata.meta
-                : [book.package.metadata.meta];
-
-            for (const meta of metas) {
-                if (meta && meta.name === 'primary-writing-mode') {
-                    writingMode = meta.content;
-                    break;
-                }
-            }
-        }
-
-        // 检查spine中的page-progression-direction
-        if (spine && spine.pageProgressionDirection) {
-            pageProgression = spine.pageProgressionDirection;
-        }
-
-        console.log('📖 检测到书写模式:', writingMode);
-        console.log('📖 检测到页面方向:', pageProgression);
-
-        // 应用竖排样式
-        const viewer = document.getElementById('viewer');
-        if (writingMode === 'vertical-rl' || pageProgression === 'rtl') {
-            console.log('📖 应用竖排样式');
-            viewer.classList.add('vertical-rl');
-
-            // 同时设置rendition的流动方向
-            if (rendition) {
-                rendition.settings.flow = 'paginated';
-                rendition.settings.spread = 'none'; // 竖排时不使用跨页
-            }
-        } else {
-            console.log('📖 使用横排样式');
-            viewer.classList.remove('vertical-rl');
-        }
-
-    } catch (error) {
-        console.error('检测书写模式失败:', error);
-    }
-}
