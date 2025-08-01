@@ -23,11 +23,24 @@
       "description": "",
       "identifier": "87da2ed9-eef8-41bd-8c59-0b8f5583cd5a",
       "coverPath": "books/covers/book_73bc7ffc_2101765a.jpg"
+    },
+    "book_ca3060eb_3c2349fb": {
+      "title": "芥川龍之介 作品全集",
+      "author": "芥川龍之介",
+      "filename": "芥川龍之介 作品全集 (芥川龍之介) (Z-Library).epub",
+      "addedDate": "1754060676910",
+      "language": "ja",
+      "fileSize": 2860074,
+      "publisher": "未知出版商",
+      "description": "",
+      "identifier": "0dc823f8-990c-463d-8baa-adcb7dea66ef",
+      "coverPath": "books/covers/book_ca3060eb_3c2349fb.jpg"
     }
   },
   "book_files": {
     "book_5c4a5f17_34c003f0": "books/book_5c4a5f17_34c003f0.epub",
-    "book_73bc7ffc_2101765a": "books/book_73bc7ffc_2101765a.epub"
+    "book_73bc7ffc_2101765a": "books/book_73bc7ffc_2101765a.epub",
+    "book_ca3060eb_3c2349fb": "books/book_ca3060eb_3c2349fb.epub"
   },
-  "saved_at": 1753997870.2712939
+  "saved_at": 1754086388.211722
 }

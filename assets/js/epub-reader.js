@@ -57,7 +57,7 @@ function createRenditionWithFixedSupport(book, viewerId, options = {}) {
         manager: 'default',
         // 使用epub-fixed.js的增强功能
         direction: 'ltr',  // 强制设置为左到右，覆盖EPUB元数据
-        writingMode: 'horizontal-tb'  // 强制设置为横排模式
+        writingMode: "horizontal-tb" // 强制设置为横排模式
     };
 
     // 合并用户配置

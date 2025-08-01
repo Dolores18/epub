@@ -10,3 +10,5 @@ noruwei/
 .vscode/
 books/
 epub.js/
+epub-fixed.js.bak.js
+theme/

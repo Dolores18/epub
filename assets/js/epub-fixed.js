@@ -14,10 +14,16 @@
  *    - 功能：settings.writingMode > 章节CSS writing-mode
  *    - 位置：第8620行初始化逻辑 + Contents.writingMode()方法增强
  *
- * 3. 添加了详细的调试日志，用于追踪direction和writingMode值的传递链路
+ * 3. Writing-Mode CSS优先级修复：
+ *    - 问题：EPUB原始CSS中的.calibre类设置writing-mode: vertical-rl会覆盖JS设置
+ *    - 修复：使用!important强制覆盖，同时设置documentElement和body元素
+ *    - 原理：通过CSS优先级机制确保全局writingMode设置生效
+ *    - 位置：Contents.writingMode()方法中的样式设置逻辑
  *
- * 修改日期：2025-07-31
- * 修改原因：
+ * 4. 添加了详细的调试日志，用于追踪direction和writingMode值的传递链路
+ *
+ * 修改日期：2025-08-02
+ * 修改原因：解决日文EPUB竖排显示问题，确保全局writingMode设置能够覆盖EPUB原始CSS样式
  *   - 解决EPUB元数据错误设置RTL导致的文字方向问题
  *   - 提供全局writing-mode控制，支持垂直排版等需求
  *
@@ -6907,7 +6913,16 @@
 
           if (finalMode && this.documentElement) {
             console.log('✅ 设置CSS writing-mode为:', finalMode);
-            this.documentElement.style[WRITING_MODE] = finalMode;
+            // 使用!important来覆盖CSS文件中的样式
+            this.documentElement.style.setProperty(WRITING_MODE, finalMode, 'important');
+
+            // 额外保险：如果有body元素，也设置它的writing-mode
+            const bodyElement = this.document.body;
+            if (bodyElement) {
+              bodyElement.style.setProperty(WRITING_MODE, finalMode, 'important');
+            }
+
+
           }
 
           const computedWritingMode = this.window.getComputedStyle(this.documentElement)[WRITING_MODE] || '';

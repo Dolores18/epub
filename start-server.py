@@ -201,7 +201,9 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     
                     self.send_response(200)
                     self.send_header('Content-type', 'application/epub+zip')
-                    self.send_header('Content-Disposition', f'inline; filename="{book_info["filename"]}"')
+                    # 对文件名进行URL编码以支持中文字符
+                    encoded_filename = urllib.parse.quote(book_info["filename"])
+                    self.send_header('Content-Disposition', f'inline; filename*=UTF-8\'\'{encoded_filename}')
                     self.end_headers()
                     
                     with open(book_path, 'rb') as f:
@@ -252,7 +254,9 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header('Content-type', 'application/epub+zip')
                     book_info = BOOKS_STORAGE[book_id]
-                    self.send_header('Content-Disposition', f'inline; filename="{book_info["filename"]}"')
+                    # 对文件名进行URL编码以支持中文字符
+                    encoded_filename = urllib.parse.quote(book_info["filename"])
+                    self.send_header('Content-Disposition', f'inline; filename*=UTF-8\'\'{encoded_filename}')
                     self.end_headers()
                     return
                 else:
