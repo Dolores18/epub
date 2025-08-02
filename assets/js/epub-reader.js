@@ -216,6 +216,7 @@ async function initReader(file = null) {
         // 尝试直接创建渲染器，不等待 book.ready
         try {
             debugLog('跳过 book.ready，直接创建渲染器...');
+            console.log('📄 [epub-reader.js] 进入主分支：直接创建渲染器');
 
             // 创建渲染器（使用epub-fixed.js增强功能）
             debugLog('创建渲染器...');
@@ -276,17 +277,29 @@ async function initReader(file = null) {
                 debugLog('目录加载失败，继续:', tocError.message);
             }
 
-            // 设置事件监听器
-            debugLog('设置事件监听器...');
-            setupEventListeners();
-
-            // 尝试生成位置信息
+            // 先生成位置信息，再设置事件监听器
             debugLog('尝试生成位置信息...');
+            console.log('📄 [epub-reader.js] 准备生成locations，当前book:', book);
+            console.log('📄 [epub-reader.js] window.ProgressManager存在:', !!window.ProgressManager);
             try {
                 await book.locations.generate(1024);
+                console.log('📄 [epub-reader.js] locations生成完成，总数:', book.locations.total);
+                // 使用ProgressManager设置book对象
+                if (window.ProgressManager) {
+                    console.log('📄 [epub-reader.js] 调用ProgressManager.setBook');
+                    window.ProgressManager.setBook(book);
+                    console.log('📄 [epub-reader.js] book对象已设置到ProgressManager');
+                } else {
+                    console.warn('📄 [epub-reader.js] ProgressManager未找到');
+                }
             } catch (locationError) {
+                console.error('📄 [epub-reader.js] 位置信息生成失败:', locationError);
                 debugLog('位置信息生成失败，继续:', locationError.message);
             }
+
+            // 设置事件监听器（在locations生成后）
+            debugLog('设置事件监听器...');
+            setupEventListeners();
 
             // 更新进度
             updateProgress();
@@ -295,6 +308,7 @@ async function initReader(file = null) {
 
         } catch (renderError) {
             debugLog('直接渲染失败，尝试等待 book.ready:', renderError.message);
+            console.log('📄 [epub-reader.js] 进入备用分支：等待book.ready');
 
             // 如果直接渲染失败，再尝试等待 book.ready
             const readyPromise = book.ready;
@@ -334,6 +348,15 @@ async function initReader(file = null) {
             await loadTOC();
             setupEventListeners();
             await book.locations.generate(1024);
+            console.log('📄 [epub-reader.js] locations生成完成，总数:', book.locations.total);
+            // 使用ProgressManager设置book对象
+            if (window.ProgressManager) {
+                console.log('📄 [epub-reader.js] 调用ProgressManager.setBook');
+                window.ProgressManager.setBook(book);
+                console.log('📄 [epub-reader.js] book对象已设置到ProgressManager');
+            } else {
+                console.warn('📄 [epub-reader.js] ProgressManager未找到');
+            }
             updateProgress();
         }
 
@@ -392,8 +415,36 @@ function showEpubMetadata() {
 function setupEventListeners() {
     // 位置变化监听
     rendition.on('relocated', (location) => {
+        console.log('📍 relocated事件触发，当前起始位置CFI:', location.start.cfi);
+        
         currentLocation = location;
-        updateProgress();
+        
+        // 使用ProgressManager更新位置
+        if (window.ProgressManager) {
+            // 如果ProgressManager中没有book，尝试设置
+            if (!window.ProgressManager.book && book && book.locations) {
+                console.log('📍 [修复] ProgressManager中没有book，现在设置');
+                window.ProgressManager.setBook(book);
+            }
+            
+            // 如果locations为空，尝试生成
+            if (book && book.locations && book.locations.total === 0) {
+                console.log('📍 [修复] locations为空，尝试生成');
+                book.locations.generate(1024).then(() => {
+                    console.log('📍 [修复] locations生成完成，总数:', book.locations.total);
+                    window.ProgressManager.setBook(book);
+                    window.ProgressManager.updateLocation(location);
+                }).catch((error) => {
+                    console.error('📍 [修复] locations生成失败:', error);
+                });
+            } else {
+                window.ProgressManager.updateLocation(location);
+            }
+        } else {
+            console.warn('📍 ProgressManager未找到，使用fallback');
+            updateProgress();
+        }
+        
         updateButtons();
     });
 
