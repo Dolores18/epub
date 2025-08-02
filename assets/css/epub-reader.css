@@ -215,7 +215,8 @@ body {
     -ms-writing-mode: tb-rl;
     direction: ltr;
     max-inline-size: none;
-    max-block-size: calc(100vw - 200px); /* 默认值，左右各减100px */
+    max-block-size: calc(100vw - 200px);
+    /* 默认值，左右各减100px */
 }
 
 #viewer.vertical-rl iframe {
@@ -820,7 +821,7 @@ body {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 40px;
+    width: 15px;
     height: 80px;
     background: rgba(255, 255, 255, 0.9);
     border: none;
@@ -863,7 +864,7 @@ body {
 /* 响应式设计 - 在小屏幕上调整控件大小 */
 @media (max-width: 768px) {
     .page-control {
-        width: 35px;
+        width: 15px;
         height: 60px;
         font-size: 18px;
     }

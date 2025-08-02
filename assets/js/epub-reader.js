@@ -43,6 +43,9 @@ let currentPage = 0;  // 当前页面索引
 let totalPages = 0;   // 总页数
 let pageHeight = 0;   // 页面高度
 
+// 书写模式配置
+let writingMode = "vertical-rl";  // 默认横排模式，可设置为 "vertical-rl" 竖排模式
+
 // 使用epub-fixed.js的增强功能创建rendition
 function createRenditionWithFixedSupport(book, viewerId, options = {}) {
     console.log('📶 使用epub-fixed.js创建rendition...');
@@ -57,7 +60,7 @@ function createRenditionWithFixedSupport(book, viewerId, options = {}) {
         manager: 'default',
         // 使用epub-fixed.js的增强功能
         direction: 'ltr',  // 强制设置为左到右，覆盖EPUB元数据
-        writingMode: "horizontal-tb" // 强制设置为横排模式
+        writingMode: writingMode // 使用全局变量设置书写模式
     };
 
     // 合并用户配置
@@ -103,9 +106,6 @@ function getFontFamilyByLanguage(language) {
 
 // 应用基于语言的字体设置
 function applyLanguageBasedFont(language) {
-    // 根据语言设置书写模式
-    setWritingModeByLanguage(language);
-
     const fontFamily = getFontFamilyByLanguage(language);
 
     if (!fontFamily) {
@@ -421,23 +421,17 @@ function setupEventListeners() {
 
 // 检测当前是否为竖排模式
 function isVerticalMode() {
-    const viewer = document.getElementById('viewer');
-    return viewer && viewer.classList.contains('vertical-rl');
+    return writingMode === "vertical-rl" || writingMode === "vertical-lr";
 }
 
-// 智能上一页（竖排模式下从右到左）
+// 智能上一页
 function prevPage() {
     if (rendition) {
         const isVertical = isVerticalMode();
         console.log('执行上一页 (竖排模式:', isVertical, ')');
         try {
-            if (isVertical) {
-                // 竖排模式：上一页应该向右翻（使用next）
-                rendition.next();
-            } else {
-                // 横排模式：正常向左翻
-                rendition.prev();
-            }
+            // 无论横排还是竖排，上一页都是 rendition.prev()
+            rendition.prev();
         } catch (error) {
             console.error('上一页失败:', error);
         }
@@ -446,19 +440,14 @@ function prevPage() {
     }
 }
 
-// 智能下一页（竖排模式下从右到左）
+// 智能下一页
 function nextPage() {
     if (rendition) {
         const isVertical = isVerticalMode();
         console.log('执行下一页 (竖排模式:', isVertical, ')');
         try {
-            if (isVertical) {
-                // 竖排模式：下一页应该向左翻（使用prev）
-                rendition.prev();
-            } else {
-                // 横排模式：正常向右翻
-                rendition.next();
-            }
+            // 无论横排还是竖排，下一页都是 rendition.next()
+            rendition.next();
         } catch (error) {
             console.error('下一页失败:', error);
         }
@@ -499,14 +488,30 @@ function updateButtons() {
     const nextPageBtn = document.getElementById('nextPageBtn');
 
     if (currentLocation) {
-        // 更新左右翻页控件
-        if (prevPageBtn) {
-            prevPageBtn.disabled = currentLocation.atStart;
-            prevPageBtn.style.opacity = currentLocation.atStart ? '0.5' : '1';
-        }
-        if (nextPageBtn) {
-            nextPageBtn.disabled = currentLocation.atEnd;
-            nextPageBtn.style.opacity = currentLocation.atEnd ? '0.5' : '1';
+        const isVertical = isVerticalMode();
+
+        if (isVertical) {
+            // 竖排模式：左控件=下一页，右控件=上一页
+            if (prevPageBtn) {
+                // 左控件：在最后一页时禁用（不能再下一页）
+                prevPageBtn.disabled = currentLocation.atEnd;
+                prevPageBtn.style.opacity = currentLocation.atEnd ? '0.5' : '1';
+            }
+            if (nextPageBtn) {
+                // 右控件：在第一页时禁用（不能再上一页）
+                nextPageBtn.disabled = currentLocation.atStart;
+                nextPageBtn.style.opacity = currentLocation.atStart ? '0.5' : '1';
+            }
+        } else {
+            // 横排模式：左控件=上一页，右控件=下一页
+            if (prevPageBtn) {
+                prevPageBtn.disabled = currentLocation.atStart;
+                prevPageBtn.style.opacity = currentLocation.atStart ? '0.5' : '1';
+            }
+            if (nextPageBtn) {
+                nextPageBtn.disabled = currentLocation.atEnd;
+                nextPageBtn.style.opacity = currentLocation.atEnd ? '0.5' : '1';
+            }
         }
     }
 }
@@ -843,21 +848,30 @@ async function initializeApp() {
 
     // 字体切换功能
     const fontSelect = document.getElementById('fontSelect');
+    console.log('🔤 字体选择器元素:', fontSelect);
     if (fontSelect) {
+        console.log('🔤 绑定字体切换事件监听器');
         fontSelect.addEventListener('change', function () {
             const selectedFont = fontSelect.value;
+            console.log('🔤 字体切换:', selectedFont);
 
             if (selectedFont === 'auto') {
                 // 自动模式：根据语言选择字体
+                console.log('🔤 自动模式：根据语言选择字体');
                 if (book && book.package && book.package.metadata) {
                     const language = book.package.metadata.language;
+                    console.log('🔤 检测到语言:', language);
                     applyLanguageBasedFont(language);
+                } else {
+                    console.warn('🔤 无法获取书籍语言信息');
                 }
             } else {
                 // 手动模式：使用用户选择的字体
+                console.log('🔤 手动模式：使用选择的字体');
                 const viewer = document.getElementById('viewer');
                 if (viewer) {
                     viewer.style.fontFamily = selectedFont;
+                    console.log('🔤 已设置viewer字体:', selectedFont);
                 }
                 // epub.js 内部内容也同步切换
                 if (rendition) {
@@ -865,6 +879,9 @@ async function initializeApp() {
                         'body': { 'font-family': selectedFont + ' !important' },
                         '*': { 'font-family': selectedFont + ' !important' }
                     });
+                    console.log('🔤 已应用epub.js字体覆盖');
+                } else {
+                    console.warn('🔤 rendition未初始化，无法应用字体');
                 }
             }
         });
