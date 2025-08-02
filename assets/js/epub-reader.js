@@ -44,7 +44,7 @@ let totalPages = 0;   // 总页数
 let pageHeight = 0;   // 页面高度
 
 // 书写模式配置
-let writingMode = "vertical-rl";  // 默认横排模式，可设置为 "vertical-rl" 竖排模式
+let writingMode = "horizontal-tb";  // 默认横排模式，可设置为 "vertical-rl" 竖排模式和"horizontal-tb"横排模式
 
 // 使用epub-fixed.js的增强功能创建rendition
 function createRenditionWithFixedSupport(book, viewerId, options = {}) {
@@ -456,12 +456,7 @@ function nextPage() {
     }
 }
 
-// 更新页面信息
-function updatePageInfo() {
-    // 分页模式下，进度信息由 updateProgress() 函数处理
-    // 这里可以添加其他页面相关的更新逻辑
-    console.log('页面信息已更新');
-}
+
 
 // 跳转到章节
 function goToChapter(href) {
@@ -470,17 +465,7 @@ function goToChapter(href) {
     }
 }
 
-// 更新进度
-function updateProgress() {
-    if (currentLocation) {
-        const progress = book.locations.percentageFromCfi(currentLocation.start.cfi);
-        const progressBar = document.getElementById('progressBar');
-        const progressText = document.getElementById('progressText');
 
-        progressBar.style.width = (progress * 100) + '%';
-        progressText.textContent = Math.round(progress * 100) + '%';
-    }
-}
 
 // 更新按钮状态
 function updateButtons() {
