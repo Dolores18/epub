@@ -979,18 +979,32 @@ async function initializeApp() {
         });
     }
 
-    // 键盘快捷键（包括基本的左右翻页）
+    // 键盘快捷键（包括智能左右翻页）
     document.addEventListener('keydown', function (e) {
         switch (e.key) {
             case 'ArrowLeft':
-                // 左箭头键：上一页（最基本功能，优先级最高）
+                // 左箭头键：智能翻页
                 e.preventDefault();
-                prevPage();
+                const isVertical = isVerticalMode();
+                if (isVertical) {
+                    // 竖排模式：左键=下一页
+                    nextPage();
+                } else {
+                    // 横排模式：左键=上一页
+                    prevPage();
+                }
                 break;
             case 'ArrowRight':
-                // 右箭头键：下一页（最基本功能，优先级最高）
+                // 右箭头键：智能翻页
                 e.preventDefault();
-                nextPage();
+                const isVerticalRight = isVerticalMode();
+                if (isVerticalRight) {
+                    // 竖排模式：右键=上一页
+                    prevPage();
+                } else {
+                    // 横排模式：右键=下一页
+                    nextPage();
+                }
                 break;
             case 'Escape':
                 // ESC键关闭所有面板
