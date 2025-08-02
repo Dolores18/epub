@@ -36,6 +36,8 @@
 
     <!-- 引入样式文件 -->
     <link rel="stylesheet" href="assets/css/epub-reader.css?v=" id="mainCSS">
+    
+    <!-- 主题样式文件将通过HTML Loader动态加载 -->
 
     <!-- 引入JavaScript库 -->
     <script src="assets/js/jszip.min.js?v=" id="jszipJS"></script>
@@ -43,6 +45,12 @@
 
     <!-- 引入词典功能 -->
     <script src="assets/js/dictionary.js?v=" id="dictJS"></script>
+    
+    <!-- 引入HTML加载器 -->
+    <script src="assets/js/html-loader.js?v=" id="htmlLoaderJS"></script>
+    
+    <!-- 引入菜单功能 -->
+    <script src="assets/js/menu.js?v=" id="menuJS"></script>
 </head>
 
 <body>
@@ -116,12 +124,16 @@
                         <path d="M8 15h8v1H8zm0-2h8v1H8zm0-2h5v1H8z"/>
                     </svg>
                 </button>
+                <button onclick="toggleThemeSelector()" title="主题选择">🎨</button>
                 <button onclick="changeFontSize(-1)" title="字体缩小">A-</button>
                 <button onclick="changeFontSize(1)" title="字体放大">A+</button>
                 <button onclick="toggleSettings()" title="设置">⚙️</button>
             </div>
         </div>
     </div>
+
+    <!-- 主题选择面板容器（内容将通过HTML Loader动态加载） -->
+    <div id="themeSelectorContainer"></div>
 
     <!-- 设置面板（默认隐藏） -->
     <div class="settings-panel" id="settingsPanel">
@@ -203,6 +215,8 @@
             { id: 'jszipJS', attr: 'src' },
             { id: 'epubJS', attr: 'src' },
             { id: 'dictJS', attr: 'src' },
+            { id: 'htmlLoaderJS', attr: 'src' },
+            { id: 'menuJS', attr: 'src' },
             { id: 'mainJS', attr: 'src' }
         ];
 

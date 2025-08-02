@@ -72,6 +72,8 @@ function createRenditionWithFixedSupport(book, viewerId, options = {}) {
     return newRendition;
 }
 
+
+
 // 根据语言获取字体设置
 function getFontFamilyByLanguage(language) {
     debugLog('检测到的语言:', language);
@@ -101,6 +103,9 @@ function getFontFamilyByLanguage(language) {
 
 // 应用基于语言的字体设置
 function applyLanguageBasedFont(language) {
+    // 根据语言设置书写模式
+    setWritingModeByLanguage(language);
+
     const fontFamily = getFontFamilyByLanguage(language);
 
     if (!fontFamily) {
@@ -320,6 +325,12 @@ async function initReader(file = null) {
                 window.Dictionary.bindRendition();
             }
 
+            // 通知主题管理器rendition已创建
+            if (window.ThemeManager && window.ThemeManager.onRenditionReady) {
+                console.log('🎨 通知主题管理器rendition已创建');
+                window.ThemeManager.onRenditionReady();
+            }
+
             await loadTOC();
             setupEventListeners();
             await book.locations.generate(1024);
@@ -515,6 +526,8 @@ function toggleSettings() {
     // 打开设置面板时自动隐藏底部菜单
     hideBottomMenu();
 }
+
+
 
 // 显示/隐藏底部菜单
 function showBottomMenu() {
@@ -780,7 +793,7 @@ function showError(message) {
 }
 
 // DOM 加载完成后的初始化
-function initializeApp() {
+async function initializeApp() {
     // 测试库加载
     testLibraries();
 
@@ -793,6 +806,14 @@ function initializeApp() {
         window.Dictionary.init();
     } else {
         console.warn('⚠️ 词典功能未加载');
+    }
+
+    // 初始化主题管理器
+    if (window.ThemeManager) {
+        console.log('🎨 初始化主题管理器...');
+        await window.ThemeManager.init();
+    } else {
+        console.warn('⚠️ 主题管理器未加载');
     }
 
     // 监听文件导入
@@ -901,25 +922,43 @@ function initializeApp() {
         });
     }
 
-    // 绑定左右翻页控件事件
+    // 绑定左右翻页控件事件（智能翻页）
     const prevPageBtn = document.getElementById('prevPageBtn');
     const nextPageBtn = document.getElementById('nextPageBtn');
 
     if (prevPageBtn) {
-        console.log('🔍 绑定上一页按钮事件');
+        console.log('🔍 绑定左控件事件');
         prevPageBtn.addEventListener('click', function (e) {
-            console.log('🔍 上一页按钮被点击');
+            console.log('🔍 左控件被点击');
             e.stopPropagation(); // 阻止事件冒泡
-            prevPage();
+
+            // 智能判断：在竖排模式下，左控件应该是下一页
+            const isVertical = isVerticalMode();
+            if (isVertical) {
+                console.log('🔍 竖排模式：左控件 -> 下一页');
+                nextPage();
+            } else {
+                console.log('🔍 横排模式：左控件 -> 上一页');
+                prevPage();
+            }
         });
     }
 
     if (nextPageBtn) {
-        console.log('🔍 绑定下一页按钮事件');
+        console.log('🔍 绑定右控件事件');
         nextPageBtn.addEventListener('click', function (e) {
-            console.log('🔍 下一页按钮被点击');
+            console.log('🔍 右控件被点击');
             e.stopPropagation(); // 阻止事件冒泡
-            nextPage();
+
+            // 智能判断：在竖排模式下，右控件应该是上一页
+            const isVertical = isVerticalMode();
+            if (isVertical) {
+                console.log('🔍 竖排模式：右控件 -> 上一页');
+                prevPage();
+            } else {
+                console.log('🔍 横排模式：右控件 -> 下一页');
+                nextPage();
+            }
         });
     }
 
@@ -960,6 +999,13 @@ function initializeApp() {
                 // D键切换词典
                 if (window.Dictionary) {
                     window.Dictionary.toggle();
+                }
+                break;
+            case 'h':
+            case 'H':
+                // H键快速切换主题
+                if (window.quickThemeSwitch) {
+                    window.quickThemeSwitch();
                 }
                 break;
         }
