@@ -36,7 +36,7 @@
 
     <!-- 引入样式文件 -->
     <link rel="stylesheet" href="assets/css/epub-reader.css?v=" id="mainCSS">
-    
+
     <!-- 主题样式文件将通过HTML Loader动态加载 -->
 
     <!-- 引入JavaScript库 -->
@@ -45,13 +45,13 @@
 
     <!-- 引入词典功能 -->
     <script src="assets/js/dictionary.js?v=" id="dictJS"></script>
-    
+
     <!-- 引入HTML加载器 -->
     <script src="assets/js/html-loader.js?v=" id="htmlLoaderJS"></script>
-    
+
     <!-- 引入菜单功能 -->
     <script src="assets/js/menu.js?v=" id="menuJS"></script>
-    
+
     <!-- 引入页面进度管理器 -->
     <script src="assets/js/page.js?v=" id="pageJS"></script>
 </head>
@@ -87,6 +87,11 @@
 
         <!-- 阅读器视图 -->
         <div id="viewer" class="viewer">
+            <!-- 退出按钮 -->
+            <button class="exit-btn" id="exitBtn" title="退出阅读">
+                <span>×</span>
+            </button>
+            
             <div class="loading" id="loading">
                 <p>正在加载电子书...</p>
             </div>
@@ -123,8 +128,9 @@
                 <button onclick="toggleSidebar()" title="目录">📚</button>
                 <button id="dictToggleBtn" onclick="Dictionary.toggle()" title="词典功能">
                     <svg class="dict-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 4h2v5l-1-.75L9 9V4zm9 16H6V4h1v9l3-2.25L13 13V4h5v16z"/>
-                        <path d="M8 15h8v1H8zm0-2h8v1H8zm0-2h5v1H8z"/>
+                        <path
+                            d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 4h2v5l-1-.75L9 9V4zm9 16H6V4h1v9l3-2.25L13 13V4h5v16z" />
+                        <path d="M8 15h8v1H8zm0-2h8v1H8zm0-2h5v1H8z" />
                     </svg>
                 </button>
                 <button onclick="toggleThemeSelector()" title="主题选择">🎨</button>
@@ -154,13 +160,16 @@
                         <option
                             value="IPAexMinchoWeb, IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">
                             🇯🇵 网页IPA明朝体（内嵌）</option>
-                        <option value="IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">🇯🇵 IPA明朝体（系统）
+                        <option value="IPAexMincho, 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">🇯🇵
+                            IPA明朝体（系统）
                         </option>
                         <option value="IPAexGothic, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">
                             🇯🇵 IPA哥特体</option>
                         <option value="'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif">🇯🇵 系统明朝体</option>
-                        <option value="'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">🇯🇵 系统哥特体</option>
-                        <option value="SimSun, 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif">🇨🇳 中文字体</option>
+                        <option value="'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'MS Gothic', sans-serif">🇯🇵 系统哥特体
+                        </option>
+                        <option value="SimSun, 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif">🇨🇳
+                            中文字体</option>
                         <option value="Batang, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif">🇰🇷 韩文字体</option>
                         <option value="">🌍 系统默认字体</option>
                     </select>

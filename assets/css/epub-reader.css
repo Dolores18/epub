@@ -962,3 +962,40 @@ body {
     background-color: #4CAF50;
     box-shadow: 0 0 0 2px white;
 }
+
+/* 退出按钮样式 */
+.exit-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    color: #333;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.exit-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.exit-btn:active {
+    transform: scale(0.95);
+}
+
+.exit-btn span {
+    font-weight: bold;
+    line-height: 1;
+}
+

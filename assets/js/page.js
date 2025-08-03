@@ -14,6 +14,7 @@ const ProgressManager = {
     targetPercentage: null,
     jumpTimer: null,
     previewTimer: null,
+    saveProgressTimer: null,
     lastDragTime: 0,
     lastPreviewPercentage: null,
 
@@ -23,8 +24,12 @@ const ProgressManager = {
         this.book = book;
         console.log('📄 book对象已设置，locations总数:', book && book.locations ? book.locations.total : '无locations');
 
-        // 设置book后立即初始化进度条拖拽
+        // 设置book后立即初始化进度条拖拽和退出按钮
         this.initProgressBarDrag();
+        this.initExitButton();
+        
+        // 不在这里恢复进度，等待rendition准备好后再调用
+        console.log('📄 等待rendition准备完成后恢复阅读进度');
     },
 
     // 更新当前位置并刷新进度
@@ -32,6 +37,9 @@ const ProgressManager = {
         console.log('📄 ProgressManager.updateLocation被调用:', location.start.cfi);
         this.currentLocation = location;
         this.updateProgress();
+        
+        // 移除自动保存逻辑，只在退出时手动保存
+        console.log('📄 位置已更新，但不自动保存（只在退出时保存）');
     },
 
     // 更新进度显示
@@ -418,6 +426,224 @@ const ProgressManager = {
             clearTimeout(this.previewTimer);
             this.previewTimer = null;
             console.log('📄 清除预览定时器');
+        }
+    },
+
+    // 当rendition准备好后调用此方法
+    onRenditionReady() {
+        console.log('📄 rendition已准备好，500ms后恢复阅读进度');
+        // 使用500ms延迟确保book对象和locations都准备好
+        setTimeout(() => {
+            this.restoreReadingProgress();
+        }, 500);
+    },
+
+    // 初始化退出按钮
+    initExitButton() {
+        const exitBtn = document.getElementById('exitBtn');
+        if (!exitBtn) {
+            console.warn('📄 找不到退出按钮元素');
+            return;
+        }
+
+        exitBtn.addEventListener('click', () => {
+            this.handleExit();
+        });
+
+        console.log('📄 退出按钮初始化完成');
+    },
+
+    // 处理退出操作
+    handleExit() {
+        console.log('📄 用户点击退出按钮');
+        
+        // 保存当前阅读进度
+        this.saveReadingProgress();
+        
+        // 返回书架页面
+        this.exitToBookshelf();
+    },
+
+    // 保存阅读进度
+    saveReadingProgress() {
+        console.log('📄 [保存进度] 开始保存阅读进度');
+        
+        if (!this.currentLocation || !this.book) {
+            console.warn('📄 [保存进度] ⚠️ 无法保存进度：缺少位置或书籍信息');
+            console.log('📄 [保存进度] - currentLocation:', this.currentLocation);
+            console.log('📄 [保存进度] - book:', this.book);
+            return;
+        }
+
+        try {
+            const bookId = this.getBookId();
+            console.log('📄 [保存进度] 书籍ID:', bookId);
+            
+            const progressData = {
+                cfi: this.currentLocation.start.cfi,
+                percentage: this.book.locations ? this.book.locations.percentageFromCfi(this.currentLocation.start.cfi) : 0,
+                timestamp: Date.now(),
+                chapterTitle: this.getCurrentChapterTitle()
+            };
+
+            console.log('📄 [保存进度] 准备保存的进度数据:', progressData);
+            console.log('📄 [保存进度] - CFI位置:', progressData.cfi);
+            console.log('📄 [保存进度] - 阅读百分比:', Math.round((progressData.percentage || 0) * 100) + '%');
+            console.log('📄 [保存进度] - 章节标题:', progressData.chapterTitle);
+
+            // 保存到localStorage
+            const storageKey = `epub_progress_${bookId}`;
+            console.log('📄 [保存进度] 使用存储键:', storageKey);
+            
+            localStorage.setItem(storageKey, JSON.stringify(progressData));
+            console.log('📄 [保存进度] ✅ 阅读进度已成功保存到本地存储');
+            
+            // 验证保存是否成功
+            const savedData = localStorage.getItem(storageKey);
+            if (savedData) {
+                console.log('📄 [保存进度] ✅ 验证：数据已成功写入localStorage');
+            } else {
+                console.error('📄 [保存进度] ❌ 验证失败：数据未能写入localStorage');
+            }
+        } catch (error) {
+            console.error('📄 [保存进度] ❌ 保存阅读进度失败:', error);
+            console.error('📄 [保存进度] 错误堆栈:', error.stack);
+        }
+    },
+
+    // 恢复阅读进度
+    restoreReadingProgress() {
+        console.log('📄 [恢复进度] 开始恢复阅读进度流程');
+        console.log('📄 [恢复进度] 当前book对象:', this.book);
+        console.log('📄 [恢复进度] book是否存在:', !!this.book);
+        
+        if (!this.book) {
+            console.warn('📄 [恢复进度] 无法恢复进度：书籍信息未准备好');
+            return;
+        }
+        
+        console.log('📄 [恢复进度] book对象验证通过，继续执行...');
+
+        try {
+            const bookId = this.getBookId();
+            console.log('📄 [恢复进度] 获取到书籍ID:', bookId);
+            
+            const storageKey = `epub_progress_${bookId}`;
+            console.log('📄 [恢复进度] 使用存储键:', storageKey);
+            
+            console.log('📄 [恢复进度] 开始从localStorage加载阅读进度...');
+            const savedProgress = localStorage.getItem(storageKey);
+            
+            if (savedProgress) {
+                console.log('📄 [恢复进度] ✅ 从本地存储成功加载到阅读进度数据');
+                console.log('📄 [恢复进度] 原始存储数据:', savedProgress);
+                
+                const progressData = JSON.parse(savedProgress);
+                console.log('📄 [恢复进度] 解析后的进度数据:', progressData);
+                console.log('📄 [恢复进度] - CFI位置:', progressData.cfi);
+                console.log('📄 [恢复进度] - 阅读百分比:', Math.round((progressData.percentage || 0) * 100) + '%');
+                console.log('📄 [恢复进度] - 章节标题:', progressData.chapterTitle);
+                console.log('📄 [恢复进度] - 保存时间:', new Date(progressData.timestamp).toLocaleString());
+
+                // 检查rendition状态
+                if (window.rendition) {
+                    console.log('📄 [恢复进度] ✅ rendition对象可用，开始跳转到保存位置');
+                    
+                    if (progressData.cfi) {
+                        console.log('📄 [恢复进度] 执行跳转到CFI:', progressData.cfi);
+                        
+                        window.rendition.display(progressData.cfi).then(() => {
+                            console.log('📄 [恢复进度] ✅ 阅读进度恢复成功！已跳转到上次阅读位置');
+                            console.log('📄 [恢复进度] 当前显示的CFI:', progressData.cfi);
+                        }).catch((error) => {
+                            console.error('📄 [恢复进度] ❌ 恢复阅读进度失败:', error);
+                            console.error('📄 [恢复进度] 失败的CFI:', progressData.cfi);
+                        });
+                    } else {
+                        console.warn('📄 [恢复进度] ⚠️ 保存的进度数据中没有CFI信息');
+                    }
+                } else {
+                    console.error('📄 [恢复进度] ❌ rendition对象不可用，无法恢复进度');
+                }
+            } else {
+                console.log('📄 [恢复进度] ℹ️ 没有找到保存的阅读进度，这可能是第一次阅读此书');
+                console.log('📄 [恢复进度] 检查的存储键:', storageKey);
+            }
+        } catch (error) {
+            console.error('📄 [恢复进度] ❌ 恢复阅读进度时发生异常:', error);
+            console.error('📄 [恢复进度] 错误堆栈:', error.stack);
+        }
+    },
+
+    // 获取书籍ID（用于存储标识）
+    getBookId() {
+        // 尝试从URL参数获取书籍ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookParam = urlParams.get('bookId') || urlParams.get('book'); // 支持两种参数名
+        
+        console.log('📄 [getBookId] URL参数:', window.location.search);
+        console.log('📄 [getBookId] bookId参数:', urlParams.get('bookId'));
+        console.log('📄 [getBookId] book参数:', urlParams.get('book'));
+        
+        if (bookParam) {
+            console.log('📄 [getBookId] 使用URL参数作为书籍ID:', bookParam);
+            return bookParam;
+        }
+
+        // 如果没有URL参数，使用书籍标题作为ID
+        if (this.book && this.book.package && this.book.package.metadata) {
+            const title = this.book.package.metadata.title;
+            const bookId = title ? title.replace(/[^a-zA-Z0-9]/g, '_') : 'unknown_book';
+            console.log('📄 [getBookId] 使用书籍标题作为ID:', bookId, '原标题:', title);
+            return bookId;
+        }
+
+        console.log('📄 [getBookId] 使用默认ID: unknown_book');
+        return 'unknown_book';
+    },
+
+    // 获取当前章节标题
+    getCurrentChapterTitle() {
+        try {
+            if (this.currentLocation && this.currentLocation.start) {
+                // 尝试从当前位置获取章节信息
+                const href = this.currentLocation.start.href;
+                if (this.book && this.book.navigation && this.book.navigation.toc) {
+                    const tocItem = this.book.navigation.toc.find(item => item.href === href);
+                    return tocItem ? tocItem.label : '未知章节';
+                }
+            }
+            return '未知章节';
+        } catch (error) {
+            console.error('📄 获取章节标题失败:', error);
+            return '未知章节';
+        }
+    },
+
+    // 防抖保存进度（避免频繁保存）
+    debouncedSaveProgress() {
+        if (this.saveProgressTimer) {
+            clearTimeout(this.saveProgressTimer);
+        }
+        
+        this.saveProgressTimer = setTimeout(() => {
+            this.saveReadingProgress();
+        }, 200); // 改为200ms
+    },
+
+    // 退出到书架页面
+    exitToBookshelf() {
+        // 检查是否在PWA模式下
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            // PWA模式下，导航到书架页面
+            window.location.href = '/index.html';
+        } else {
+            // 浏览器模式下，可以关闭窗口或返回上一页
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '/index.html';
+            }
         }
     }
 };

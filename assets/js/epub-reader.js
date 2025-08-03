@@ -263,6 +263,12 @@ async function initReader(file = null) {
                 window.Dictionary.bindRendition();
             }
 
+            // 通知ProgressManager rendition已准备好，可以恢复阅读进度
+            if (window.ProgressManager && window.ProgressManager.onRenditionReady) {
+                console.log('📄 通知ProgressManager rendition已准备好');
+                window.ProgressManager.onRenditionReady();
+            }
+
             // 分页模式下不需要手动计算页面信息
             // epub.js 会自动处理分页和行截断问题
 
@@ -337,6 +343,12 @@ async function initReader(file = null) {
             if (window.Dictionary && window.Dictionary.bindRendition) {
                 console.log('🔍 通知词典功能绑定rendition');
                 window.Dictionary.bindRendition();
+            }
+
+            // 通知ProgressManager rendition已准备好，可以恢复阅读进度
+            if (window.ProgressManager && window.ProgressManager.onRenditionReady) {
+                console.log('📄 通知ProgressManager rendition已准备好');
+                window.ProgressManager.onRenditionReady();
             }
 
             // 通知主题管理器rendition已创建
@@ -416,9 +428,9 @@ function setupEventListeners() {
     // 位置变化监听
     rendition.on('relocated', (location) => {
         console.log('📍 relocated事件触发，当前起始位置CFI:', location.start.cfi);
-        
+
         currentLocation = location;
-        
+
         // 使用ProgressManager更新位置
         if (window.ProgressManager) {
             // 如果ProgressManager中没有book，尝试设置
@@ -426,7 +438,7 @@ function setupEventListeners() {
                 console.log('📍 [修复] ProgressManager中没有book，现在设置');
                 window.ProgressManager.setBook(book);
             }
-            
+
             // 如果locations为空，尝试生成
             if (book && book.locations && book.locations.total === 0) {
                 console.log('📍 [修复] locations为空，尝试生成');
@@ -444,7 +456,7 @@ function setupEventListeners() {
             console.warn('📍 ProgressManager未找到，使用fallback');
             updateProgress();
         }
-        
+
         updateButtons();
     });
 
@@ -605,6 +617,12 @@ function handleGlobalClick(e) {
     // 如果菜单不存在或已隐藏，移除监听器
     if (!bottomMenu || !bottomMenu.classList.contains('show')) {
         document.removeEventListener('click', handleGlobalClick);
+        return;
+    }
+
+    // 检查是否点击了退出按钮，如果是则不处理
+    if (e.target.closest('#exitBtn') || e.target.closest('.exit-btn')) {
+        console.log('🔍 点击了退出按钮，不处理菜单隐藏');
         return;
     }
 
@@ -1284,6 +1302,12 @@ async function loadBookFromAPI(bookId) {
         if (window.Dictionary && window.Dictionary.bindRendition) {
             console.log('📚 通知词典功能绑定rendition');
             window.Dictionary.bindRendition();
+        }
+
+        // 通知ProgressManager rendition已准备好，可以恢复阅读进度
+        if (window.ProgressManager && window.ProgressManager.onRenditionReady) {
+            console.log('📄 通知ProgressManager rendition已准备好');
+            window.ProgressManager.onRenditionReady();
         }
 
         // 隐藏加载提示
