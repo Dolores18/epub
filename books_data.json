@@ -42,13 +42,13 @@
     "book_73bc7ffc_2101765a": "books/book_73bc7ffc_2101765a.epub",
     "book_ca3060eb_3c2349fb": "books/book_ca3060eb_3c2349fb.epub"
   },
-  "saved_at": 1754931927.28413,
   "reading_progress": {
     "book_73bc7ffc_2101765a": {
-      "cfi": "epubcfi(/6/16!/4/2/1:0)",
-      "percentage": 0.6621392190152802,
-      "chapterTitle": "\n        第六章\n      ",
-      "timestamp": 1754931927284
+      "cfi": "epubcfi(/6/4!/4/18/1:0)",
+      "percentage": 0.5008488964346349,
+      "chapterTitle": "\n        献词\n      ",
+      "timestamp": 1754934214735
     }
-  }
+  },
+  "saved_at": 1754934214.7354538
 }

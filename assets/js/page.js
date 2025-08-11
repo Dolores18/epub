@@ -436,9 +436,15 @@ const ProgressManager = {
 
     // 当rendition准备好后调用此方法
     onRenditionReady() {
-        console.log('📄 rendition已准备好，500ms后恢复阅读进度');
+        console.log('📄 [渲染就绪] ========== onRenditionReady被调用 ==========');
+        console.log('📄 [渲染就绪] 调用时间:', new Date().toLocaleString());
+        console.log('📄 [渲染就绪] 当前book对象:', this.book ? '存在' : '不存在');
+        console.log('📄 [渲染就绪] rendition对象:', window.rendition ? '存在' : '不存在');
+        console.log('📄 [渲染就绪] 500ms后恢复阅读进度');
+
         // 使用500ms延迟确保book对象和locations都准备好
         setTimeout(() => {
+            console.log('📄 [渲染就绪] ⏰ 延迟时间到，开始调用restoreReadingProgress');
             this.restoreReadingProgress();
         }, 500);
     },
@@ -610,23 +616,31 @@ const ProgressManager = {
             const bookId = this.getBookId();
             console.log('📄 [恢复进度] 获取到书籍ID:', bookId);
 
-            // 首先尝试从服务器获取进度
+            // 只从服务器获取进度（确保跨浏览器同步）
+            console.log('📄 [恢复进度] 🌐 从服务器获取阅读进度...');
             fetch(`/api/progress/${bookId}`)
-                .then(response => response.json())
+                .then(response => {
+                    console.log('📄 [恢复进度] 📥 服务器响应状态:', response.status);
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('📄 [恢复进度] 📋 服务器响应数据:', data);
                     if (data.success && data.progress) {
                         console.log('📄 [恢复进度] ✅ 从服务器成功加载到阅读进度数据');
-                        console.log('📄 [恢复进度] 服务器进度数据:', data.progress);
+                        console.log('📄 [恢复进度] 📖 服务器进度数据:', data.progress);
+                        console.log('📄 [恢复进度] 📊 阅读百分比:', Math.round((data.progress.percentage || 0) * 100) + '%');
+                        console.log('📄 [恢复进度] 📅 保存时间:', new Date(data.progress.timestamp).toLocaleString());
 
                         this.applyProgress(data.progress);
                     } else {
-                        console.log('📄 [恢复进度] 服务器没有进度数据，尝试本地存储');
-                        this.restoreFromLocalStorage(bookId);
+                        console.log('📄 [恢复进度] ℹ️ 服务器没有进度数据，这可能是第一次阅读此书');
+                        console.log('📄 [恢复进度] 📚 将从书籍开头开始阅读');
                     }
                 })
                 .catch(error => {
-                    console.error('📄 [恢复进度] 从服务器获取进度失败，尝试本地存储:', error);
-                    this.restoreFromLocalStorage(bookId);
+                    console.error('📄 [恢复进度] ❌ 从服务器获取进度失败:', error);
+                    console.error('📄 [恢复进度] 🔍 错误详情:', error.message);
+                    console.log('📄 [恢复进度] 📚 将从书籍开头开始阅读');
                 });
 
         } catch (error) {
@@ -635,53 +649,43 @@ const ProgressManager = {
         }
     },
 
-    // 从本地存储恢复进度（回退方案）
-    restoreFromLocalStorage(bookId) {
-        const storageKey = `epub_progress_${bookId}`;
-        console.log('📄 [恢复进度] 使用本地存储键:', storageKey);
 
-        const savedProgress = localStorage.getItem(storageKey);
-
-        if (savedProgress) {
-            console.log('📄 [恢复进度] ✅ 从本地存储成功加载到阅读进度数据');
-
-            const progressData = JSON.parse(savedProgress);
-            this.applyProgress(progressData);
-        } else {
-            console.log('📄 [恢复进度] ℹ️ 没有找到保存的阅读进度，这可能是第一次阅读此书');
-        }
-    },
 
     // 应用进度数据
     applyProgress(progressData) {
-        console.log('📄 [恢复进度] 解析后的进度数据:', progressData);
-        console.log('📄 [恢复进度] - CFI位置:', progressData.cfi);
-        console.log('📄 [恢复进度] - 阅读百分比:', Math.round((progressData.percentage || 0) * 100) + '%');
-        console.log('📄 [恢复进度] - 章节标题:', progressData.chapterTitle);
+        console.log('📄 [应用进度] ========== 开始应用进度数据 ==========');
+        console.log('📄 [应用进度] 📋 进度数据:', progressData);
+        console.log('📄 [应用进度] 📍 CFI位置:', progressData.cfi);
+        console.log('📄 [应用进度] 📊 阅读百分比:', Math.round((progressData.percentage || 0) * 100) + '%');
+        console.log('📄 [应用进度] 📖 章节标题:', progressData.chapterTitle);
 
         if (progressData.timestamp) {
-            console.log('📄 [恢复进度] - 保存时间:', new Date(progressData.timestamp).toLocaleString());
+            console.log('📄 [应用进度] 📅 保存时间:', new Date(progressData.timestamp).toLocaleString());
         }
 
         // 检查rendition状态
         if (window.rendition) {
-            console.log('📄 [恢复进度] ✅ rendition对象可用，开始跳转到保存位置');
+            console.log('📄 [应用进度] ✅ rendition对象可用，开始跳转到保存位置');
 
             if (progressData.cfi) {
-                console.log('📄 [恢复进度] 执行跳转到CFI:', progressData.cfi);
+                console.log('📄 [应用进度] 🚀 执行跳转到CFI:', progressData.cfi);
 
                 window.rendition.display(progressData.cfi).then(() => {
-                    console.log('📄 [恢复进度] ✅ 阅读进度恢复成功！已跳转到上次阅读位置');
-                    console.log('📄 [恢复进度] 当前显示的CFI:', progressData.cfi);
+                    console.log('📄 [应用进度] ✅ 阅读进度恢复成功！已跳转到上次阅读位置');
+                    console.log('📄 [应用进度] 📍 当前显示的CFI:', progressData.cfi);
+                    console.log('� [应用恢进度] ========== 应用进度完成（成功）==========');
                 }).catch((error) => {
-                    console.error('📄 [恢复进度] ❌ 恢复阅读进度失败:', error);
-                    console.error('📄 [恢复进度] 失败的CFI:', progressData.cfi);
+                    console.error('📄 [应用进度] ❌ 恢复阅读进度失败:', error);
+                    console.error('📄 [应用进度] 💥 失败的CFI:', progressData.cfi);
+                    console.log('📄 [应用进度] ========== 应用进度完成（失败）==========');
                 });
             } else {
-                console.warn('📄 [恢复进度] ⚠️ 保存的进度数据中没有CFI信息');
+                console.warn('📄 [应用进度] ⚠️ 保存的进度数据中没有CFI信息');
+                console.log('📄 [应用进度] ========== 应用进度完成（无CFI）==========');
             }
         } else {
-            console.error('📄 [恢复进度] ❌ rendition对象不可用，无法恢复进度');
+            console.error('📄 [应用进度] ❌ rendition对象不可用，无法恢复进度');
+            console.log('📄 [应用进度] ========== 应用进度完成（无rendition）==========');
         }
     },
 

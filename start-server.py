@@ -23,9 +23,16 @@ from io import BytesIO
 # 默认端口，如果被占用会自动尝试其他端口
 DEFAULT_PORTS = [8080, 8000, 8888, 9000, 3000, 5000]
 
-# 全局书籍存储
-BOOKS_STORAGE = {}
-BOOK_FILES = {}  # 改名：存储永久文件路径
+# 导入数据管理器
+from data import get_data_manager, save_books_data, load_books_data
+
+# 全局数据管理器
+data_manager = get_data_manager()
+
+# 为了兼容现有代码，保留全局变量引用
+BOOKS_STORAGE = data_manager.books
+BOOK_FILES = data_manager.book_files
+READING_PROGRESS = data_manager.reading_progress
 BOOKS_DATA_FILE = 'books_data.json'
 BOOKS_DIR = 'books'  # 书籍存储目录
 COVERS_DIR = 'books/covers'  # 封面存储目录
@@ -52,6 +59,7 @@ def save_books_data():
         books_data = {
             'books': BOOKS_STORAGE,
             'book_files': BOOK_FILES,  # 改为永久文件路径
+            'reading_progress': READING_PROGRESS,  # 包含阅读进度
             'saved_at': time.time()
         }
         
@@ -64,7 +72,7 @@ def save_books_data():
 
 def load_books_data():
     """从文件加载书籍数据"""
-    global BOOKS_STORAGE, BOOK_FILES
+    global BOOKS_STORAGE, BOOK_FILES, READING_PROGRESS
     
     try:
         # 确保书籍目录存在
@@ -76,6 +84,7 @@ def load_books_data():
             
             BOOKS_STORAGE = books_data.get('books', {})
             saved_book_files = books_data.get('book_files', {})
+            READING_PROGRESS = books_data.get('reading_progress', {})  # 加载阅读进度
             
             # 兼容旧格式：如果没有book_files但有temp_files，清空数据
             if not saved_book_files and books_data.get('temp_files'):
@@ -96,6 +105,7 @@ def load_books_data():
             BOOK_FILES = valid_book_files
             
             print(f"📚 从 {BOOKS_DATA_FILE} 加载了 {len(BOOKS_STORAGE)} 本书籍")
+            print(f"📖 加载了 {len(READING_PROGRESS)} 个阅读进度记录")
         else:
             print(f"📚 数据文件 {BOOKS_DATA_FILE} 不存在，使用空数据")
             
@@ -129,8 +139,8 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # 处理API路由 /api/cover/<bookId> - 获取书籍封面
         if path.startswith('/api/cover/'):
             book_id = path[11:]  # 移除 '/api/cover/' 前缀
-            if book_id in BOOKS_STORAGE:
-                book_info = BOOKS_STORAGE[book_id]
+            book_info = data_manager.get_book(book_id)
+            if book_info:
                 cover_path = book_info.get('coverPath')
                 
                 if cover_path and os.path.exists(cover_path):
@@ -153,7 +163,8 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # 处理API路由 /api/books - 获取所有书籍列表
         if path == '/api/books':
-            print(f"📚 获取书籍列表，共 {len(BOOKS_STORAGE)} 本书")
+            books = data_manager.get_all_books()
+            print(f"📚 [API] 获取书籍列表，共 {len(books)} 本书")
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json; charset=utf-8')
@@ -161,7 +172,7 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             # 构建书籍列表响应
             books_list = []
-            for book_id, book_info in BOOKS_STORAGE.items():
+            for book_id, book_info in books.items():
                 # 检查是否有封面
                 has_cover = book_info.get('coverPath') and os.path.exists(book_info.get('coverPath', ''))
                 
@@ -191,24 +202,15 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # 处理API路由 /api/progress/<bookId> - 获取阅读进度
         if path.startswith('/api/progress/'):
-            book_id = path[13:]  # 移除 '/api/progress/' 前缀
-            print(f"📖 获取阅读进度: {book_id}")
+            book_id = path[14:]  # 移除 '/api/progress/' 前缀 (14个字符)
+            print(f"📖 [API] 获取阅读进度请求: '{book_id}'")
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json; charset=utf-8')
             self.end_headers()
             
-            # 从books_data.json加载最新数据
-            progress_data = None
-            try:
-                if os.path.exists(BOOKS_DATA_FILE):
-                    with open(BOOKS_DATA_FILE, 'r', encoding='utf-8') as f:
-                        books_data = json.load(f)
-                    
-                    reading_progress = books_data.get('reading_progress', {})
-                    progress_data = reading_progress.get(book_id)
-            except Exception as e:
-                print(f"❌ 读取阅读进度失败: {e}")
+            # 使用数据管理器获取进度数据
+            progress_data = data_manager.get_progress(book_id)
             
             response = {
                 'success': True,
@@ -216,15 +218,16 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 'progress': progress_data
             }
             
+            print(f"📖 [API] 返回进度数据: {response}")
             self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
             return
         
         # 处理API路由 /api/book/<bookId> - 获取特定书籍的文件
         if path.startswith('/api/book/'):
             book_id = path[10:]  # 移除 '/api/book/' 前缀
-            if book_id in BOOKS_STORAGE:
-                book_info = BOOKS_STORAGE[book_id]
-                book_path = BOOK_FILES.get(book_id)
+            book_info = data_manager.get_book(book_id)
+            if book_info:
+                book_path = data_manager.get_book_file_path(book_id)
                 
                 if book_path and os.path.exists(book_path):
                     print(f"📚 提供书籍文件: {book_id}")
@@ -249,7 +252,7 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # 处理书籍路由 /book/<bookId>
         if path.startswith('/book/'):
             book_id = path[6:]  # 移除 '/book/' 前缀
-            if book_id in BOOKS_STORAGE:
+            if data_manager.get_book(book_id):
                 print(f"📚 书籍路由: {book_id}")
                 
                 # 重定向到阅读器页面，带上bookId参数
@@ -275,15 +278,15 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # 处理API路由 /api/book/<bookId> - 检查特定书籍是否存在
         if path.startswith('/api/book/'):
             book_id = path[10:]  # 移除 '/api/book/' 前缀
-            if book_id in BOOKS_STORAGE:
-                book_path = BOOK_FILES.get(book_id)
+            book_info = data_manager.get_book(book_id)
+            if book_info:
+                book_path = data_manager.get_book_file_path(book_id)
                 
                 if book_path and os.path.exists(book_path):
                     print(f"📚 书籍存在验证成功: {book_id}")
                     
                     self.send_response(200)
                     self.send_header('Content-type', 'application/epub+zip')
-                    book_info = BOOKS_STORAGE[book_id]
                     # 对文件名进行URL编码以支持中文字符
                     encoded_filename = urllib.parse.quote(book_info["filename"])
                     self.send_header('Content-Disposition', f'inline; filename*=UTF-8\'\'{encoded_filename}')
@@ -396,8 +399,8 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     
                     print(f"📚 处理书籍: {title} by {author} ({language})")
                     
-                    # 存储书籍信息
-                    BOOKS_STORAGE[book_id] = {
+                    # 使用数据管理器存储书籍信息
+                    book_info = {
                         'title': title,
                         'author': author,
                         'filename': filename,
@@ -410,11 +413,11 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         'coverPath': cover_path  # 添加封面路径
                     }
                     
-                    BOOK_FILES[book_id] = book_file_path
+                    data_manager.add_book(book_id, book_info, book_file_path)
                     
                     uploaded_books.append({
                         'id': book_id,
-                        'title': BOOKS_STORAGE[book_id]['title'],
+                        'title': book_info['title'],
                         'filename': filename
                     })
                     
@@ -422,7 +425,7 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     file_index += 1
                 
                 # 保存数据到文件
-                save_books_data()
+                data_manager.save_data()
                 
                 # 返回成功响应
                 self.send_response(200)
@@ -460,35 +463,23 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(400, "Missing bookId or progress data")
                     return
                 
-                print(f"📖 保存阅读进度: {book_id}")
-                print(f"📖 进度数据: CFI={progress_info.get('cfi', 'N/A')}, 百分比={progress_info.get('percentage', 0)*100:.1f}%")
+                print(f"📖 [API] 保存阅读进度: {book_id}")
+                print(f"📖 [API] 进度数据: CFI={progress_info.get('cfi', 'N/A')}, 百分比={progress_info.get('percentage', 0)*100:.1f}%")
                 
-                # 加载现有数据
-                books_data = {}
-                if os.path.exists(BOOKS_DATA_FILE):
-                    with open(BOOKS_DATA_FILE, 'r', encoding='utf-8') as f:
-                        books_data = json.load(f)
-                
-                # 确保reading_progress字段存在
-                if 'reading_progress' not in books_data:
-                    books_data['reading_progress'] = {}
-                
-                # 保存进度数据
-                books_data['reading_progress'][book_id] = {
+                # 使用数据管理器保存进度
+                progress_data = {
                     'cfi': progress_info.get('cfi'),
                     'percentage': progress_info.get('percentage', 0),
                     'chapterTitle': progress_info.get('chapterTitle', '未知章节'),
                     'timestamp': int(time.time() * 1000)  # 使用毫秒时间戳
                 }
                 
-                # 更新保存时间
-                books_data['saved_at'] = time.time()
+                data_manager.set_progress(book_id, progress_data)
                 
-                # 写入文件
-                with open(BOOKS_DATA_FILE, 'w', encoding='utf-8') as f:
-                    json.dump(books_data, f, ensure_ascii=False, indent=2)
+                # 保存到文件
+                data_manager.save_data()
                 
-                print(f"✅ 阅读进度已保存到 {BOOKS_DATA_FILE}")
+                print(f"✅ [API] 阅读进度已保存到 {BOOKS_DATA_FILE}")
                 
                 # 返回成功响应
                 self.send_response(200)
@@ -499,7 +490,7 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     'success': True,
                     'message': '阅读进度保存成功',
                     'bookId': book_id,
-                    'timestamp': books_data['reading_progress'][book_id]['timestamp']
+                    'timestamp': progress_data['timestamp']
                 }
                 
                 self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
@@ -542,7 +533,8 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(400, "Missing bookId or cover data")
                     return
                 
-                if book_id not in BOOKS_STORAGE:
+                book_info = data_manager.get_book(book_id)
+                if not book_info:
                     self.send_error(404, f"Book not found: {book_id}")
                     return
                 
@@ -555,10 +547,11 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     f.write(cover_data['content'])
                 
                 # 更新书籍信息
-                BOOKS_STORAGE[book_id]['coverPath'] = cover_path
+                book_info['coverPath'] = cover_path
+                data_manager.add_book(book_id, book_info, data_manager.get_book_file_path(book_id))
                 
                 # 保存数据
-                save_books_data()
+                data_manager.save_data()
                 
                 print(f"📸 封面补充成功: {book_id}")
                 
@@ -670,7 +663,7 @@ def signal_handler(signum, frame):
     """处理信号，确保优雅关闭"""
     print("\n👋 正在关闭服务器...")
     # 保存数据（确保数据不丢失）
-    save_books_data()
+    data_manager.save_data()
     print("📚 数据已保存")
     sys.exit(0)
 
@@ -680,7 +673,15 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     # 加载保存的书籍数据
-    load_books_data()
+    print("🔄 启动时加载数据...")
+    data_manager.validate_book_files()  # 验证文件完整性
+    print(f"📊 数据统计: {data_manager}")
+    
+    # 更新全局变量引用（确保最新数据）
+    global BOOKS_STORAGE, BOOK_FILES, READING_PROGRESS
+    BOOKS_STORAGE = data_manager.books
+    BOOK_FILES = data_manager.book_files
+    READING_PROGRESS = data_manager.reading_progress
     
     # 固定使用8080端口
     port = 8080
