@@ -15155,18 +15155,34 @@
 
 
         generate(chars) {
+          console.log('🔍 [Locations] generate() 被调用，参数:', chars);
           if (chars) {
             this.break = chars;
+            console.log('🔍 [Locations] 设置分割字符数:', this.break);
           }
 
           this.q.pause();
+          console.log('🔍 [Locations] 开始遍历章节...');
+          let sectionCount = 0;
           this.spine.each(function (section) {
             if (section.linear) {
+              sectionCount++;
+              console.log(`🔍 [Locations] 添加章节 ${sectionCount}: ${section.href} (index: ${section.index})`);
               this.q.enqueue(this.process.bind(this), section);
+            } else {
+              console.log(`🔍 [Locations] 跳过非线性章节: ${section.href}`);
             }
           }.bind(this));
+          
+          console.log(`🔍 [Locations] 总共添加了 ${sectionCount} 个线性章节到处理队列`);
+          
           return this.q.run().then(function () {
             this.total = this._locations.length - 1;
+            console.log('🔍 [Locations] 生成完成！');
+            console.log('🔍 [Locations] 总位置数:', this.total);
+            console.log('🔍 [Locations] 位置数组长度:', this._locations.length);
+            console.log('🔍 [Locations] 前10个位置:', this._locations.slice(0, 10));
+            console.log('🔍 [Locations] 后10个位置:', this._locations.slice(-10));
 
             if (this._currentCfi) {
               this.currentLocation = this._currentCfi;
@@ -15186,10 +15202,19 @@
         }
 
         process(section) {
+          console.log(`🔍 [Locations] 开始处理章节: ${section.href} (index: ${section.index})`);
           return section.load(this.request).then(function (contents) {
             var completed = new core["defer"]();
+            console.log(`🔍 [Locations] 章节 ${section.href} 加载完成，开始解析...`);
             var locations = this.parse(contents, section.cfiBase);
+            console.log(`🔍 [Locations] 章节 ${section.href} 解析完成，生成了 ${locations.length} 个位置点`);
+            console.log(`🔍 [Locations] 章节 ${section.href} 的位置点:`, locations);
+            
+            var beforeLength = this._locations.length;
             this._locations = this._locations.concat(locations);
+            var afterLength = this._locations.length;
+            console.log(`🔍 [Locations] 合并后总位置数: ${beforeLength} -> ${afterLength}`);
+            
             section.unload();
             this.processingTimeout = setTimeout(() => completed.resolve(locations), this.pause);
             return completed.promise;
@@ -15197,14 +15222,30 @@
         }
 
         parse(contents, cfiBase, chars) {
+          console.log(`🔍 [Locations] parse() 开始解析，cfiBase: ${cfiBase}`);
           var locations = [];
           var range;
           var doc = contents.ownerDocument;
           var body = Object(core["qs"])(doc, "body");
           var counter = 0;
           var prev;
+          var textNodeCount = 0;
+          var totalTextLength = 0;
 
           var _break = chars || this.break;
+          console.log(`🔍 [Locations] 使用分割字符数: ${_break}`);
+          
+          // 先统计文本信息
+          Object(core["sprint"])(body, function(node) {
+            textNodeCount++;
+            totalTextLength += node.length;
+          });
+          console.log(`🔍 [Locations] 章节文本统计: ${textNodeCount} 个文本节点, 总字符数: ${totalTextLength}`);
+          
+          if (totalTextLength === 0) {
+            console.log(`🔍 [Locations] ⚠️ 章节没有文本内容，可能是图片页面`);
+            return locations;
+          }
 
           var parser = function (node) {
             var len = node.length;
@@ -15256,6 +15297,7 @@
                 range.endOffset = pos; // cfi = section.cfiFromRange(range);
 
                 let cfi = new epubcfi["a" /* default */](range, cfiBase).toString();
+                console.log(`🔍 [Locations] 生成位置点 ${locations.length + 1}: ${cfi} (字符位置: ${pos})`);
                 locations.push(cfi);
                 counter = 0;
               }
@@ -15416,23 +15458,34 @@
 
 
         locationFromCfi(cfi) {
+          console.log('🔍 [locationFromCfi] 输入CFI:', cfi);
           let loc;
 
           if (epubcfi["a" /* default */].prototype.isCfiString(cfi)) {
             cfi = new epubcfi["a" /* default */](cfi);
+            console.log('🔍 [locationFromCfi] CFI转换为对象:', cfi);
           } // Check if the location has not been set yet
 
 
           if (this._locations.length === 0) {
+            console.log('🔍 [locationFromCfi] ❌ locations数组为空，返回-1');
             return -1;
           }
 
+          console.log('🔍 [locationFromCfi] locations数组长度:', this._locations.length);
+          console.log('🔍 [locationFromCfi] 开始在locations中查找CFI位置...');
+          
           loc = Object(core["locationOf"])(cfi, this._locations, this.epubcfi.compare);
+          
+          console.log('🔍 [locationFromCfi] locationOf返回的位置索引:', loc);
+          console.log('🔍 [locationFromCfi] 总位置数(this.total):', this.total);
 
           if (loc > this.total) {
+            console.log('🔍 [locationFromCfi] 位置索引超出范围，返回total:', this.total);
             return this.total;
           }
 
+          console.log('🔍 [locationFromCfi] 最终返回位置索引:', loc);
           return loc;
         }
         /**
@@ -15443,14 +15496,22 @@
 
 
         percentageFromCfi(cfi) {
+          console.log('🔍 [percentageFromCfi] 输入CFI:', cfi);
           if (this._locations.length === 0) {
+            console.log('🔍 [percentageFromCfi] ❌ locations数组为空，返回null');
             return null;
           } // Find closest cfi
 
-
+          console.log('🔍 [percentageFromCfi] 调用locationFromCfi获取位置索引...');
           var loc = this.locationFromCfi(cfi); // Get percentage in total
-
-          return this.percentageFromLocation(loc);
+          
+          console.log('🔍 [percentageFromCfi] 获得位置索引:', loc);
+          console.log('🔍 [percentageFromCfi] 调用percentageFromLocation计算百分比...');
+          
+          var percentage = this.percentageFromLocation(loc);
+          console.log('🔍 [percentageFromCfi] 最终百分比:', percentage);
+          
+          return percentage;
         }
         /**
          * Get a percentage position from a location index

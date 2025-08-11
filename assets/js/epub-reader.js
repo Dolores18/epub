@@ -38,6 +38,7 @@ function testLibraries() {
 let book;
 let rendition;
 let currentLocation;
+let isLocationsGenerating = false; // 防止重复生成locations的标志
 let importedUrl = null;
 let currentPage = 0;  // 当前页面索引
 let totalPages = 0;   // 总页数
@@ -288,8 +289,16 @@ async function initReader(file = null) {
             console.log('📄 [epub-reader.js] 准备生成locations，当前book:', book);
             console.log('📄 [epub-reader.js] window.ProgressManager存在:', !!window.ProgressManager);
             try {
-                await book.locations.generate(1024);
-                console.log('📄 [epub-reader.js] locations生成完成，总数:', book.locations.total);
+                // 使用全局标志防止重复生成
+                if (!isLocationsGenerating && book.locations.total === 0) {
+                    console.log('📄 [epub-reader.js] locations未生成，开始生成...');
+                    isLocationsGenerating = true; // 设置标志
+                    await book.locations.generate(1024);
+                    console.log('📄 [epub-reader.js] locations生成完成，总数:', book.locations.total);
+                    isLocationsGenerating = false; // 重置标志
+                } else {
+                    console.log('📄 [epub-reader.js] locations已存在或正在生成中，跳过生成，总数:', book.locations.total);
+                }
                 // 使用ProgressManager设置book对象
                 if (window.ProgressManager) {
                     console.log('📄 [epub-reader.js] 调用ProgressManager.setBook');
@@ -359,8 +368,16 @@ async function initReader(file = null) {
 
             await loadTOC();
             setupEventListeners();
-            await book.locations.generate(1024);
-            console.log('📄 [epub-reader.js] locations生成完成，总数:', book.locations.total);
+            // 使用全局标志防止重复生成
+            if (!isLocationsGenerating && book.locations.total === 0) {
+                console.log('📄 [epub-reader.js] locations未生成，开始生成...');
+                isLocationsGenerating = true; // 设置标志
+                await book.locations.generate(1024);
+                console.log('📄 [epub-reader.js] locations生成完成，总数:', book.locations.total);
+                isLocationsGenerating = false; // 重置标志
+            } else {
+                console.log('📄 [epub-reader.js] locations已存在或正在生成中，跳过生成，总数:', book.locations.total);
+            }
             // 使用ProgressManager设置book对象
             if (window.ProgressManager) {
                 console.log('📄 [epub-reader.js] 调用ProgressManager.setBook');
@@ -440,16 +457,24 @@ function setupEventListeners() {
             }
 
             // 如果locations为空，尝试生成
-            if (book && book.locations && book.locations.total === 0) {
+            if (book && book.locations && !isLocationsGenerating && book.locations.total === 0) {
                 console.log('📍 [修复] locations为空，尝试生成');
+                isLocationsGenerating = true; // 设置标志
                 book.locations.generate(1024).then(() => {
                     console.log('📍 [修复] locations生成完成，总数:', book.locations.total);
+                    isLocationsGenerating = false; // 重置标志
                     window.ProgressManager.setBook(book);
                     window.ProgressManager.updateLocation(location);
                 }).catch((error) => {
                     console.error('📍 [修复] locations生成失败:', error);
+                    isLocationsGenerating = false; // 出错时也要重置标志
                 });
             } else {
+                if (isLocationsGenerating) {
+                    console.log('📍 [修复] locations正在生成中，跳过');
+                } else {
+                    console.log('📍 [修复] locations已存在，直接更新位置');
+                }
                 window.ProgressManager.updateLocation(location);
             }
         } else {
