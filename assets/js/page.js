@@ -15,8 +15,6 @@ const ProgressManager = {
     jumpTimer: null,
     previewTimer: null,
     saveProgressTimer: null,
-    lastDragTime: 0,
-    lastPreviewPercentage: null,
 
     // 设置book对象
     setBook(book) {
@@ -147,40 +145,12 @@ const ProgressManager = {
             progressBar.style.width = (percentage * 100) + '%';
             document.getElementById('progressText').textContent = Math.round(percentage * 100) + '%';
 
-            // 记录最后拖拽时间
-            this.lastDragTime = Date.now();
-
             // 清除之前的定时器
-            if (this.jumpTimer) {
-                clearTimeout(this.jumpTimer);
-                this.jumpTimer = null;
-            }
-            if (this.previewTimer) {
-                clearTimeout(this.previewTimer);
-                this.previewTimer = null;
-            }
+            this.clearJumpTimer();
 
-            // 快速预览：如果位置变化超过5%，立即预览
-            const percentageDiff = Math.abs(percentage - (this.lastPreviewPercentage || 0));
-            if (percentageDiff > 0.05) {
-                this.previewTimer = setTimeout(() => {
-                    if (isDragging) {
-                        console.log('📄 快速预览跳转到:', Math.round(percentage * 100) + '%');
-                        this.jumpToProgress(percentage, true); // true表示预览模式
-                        this.lastPreviewPercentage = percentage;
-                    }
-                }, 100); // 100ms快速预览
-            }
-
-            // 确认跳转：用户停止拖拽300ms后执行最终跳转
-            this.jumpTimer = setTimeout(() => {
-                if (isDragging && Date.now() - this.lastDragTime >= 300) {
-                    console.log('📄 用户停止拖拽，确认跳转到:', Math.round(percentage * 100) + '%');
-                    this.jumpToProgress(percentage, false); // false表示确认模式
-                }
-            }, 300);
-
-            console.log('📄 拖拽中，进度:', Math.round(percentage * 100) + '%');
+            // 实时跳转：locations已可用，无需防抖延迟
+            console.log('📄 实时跳转到:', Math.round(percentage * 100) + '%');
+            this.jumpToProgress(percentage, true); // 实时预览模式
         };
 
         // 鼠标释放事件
@@ -195,22 +165,12 @@ const ProgressManager = {
             const relativeX = e.clientX - containerRect.left;
             const percentage = Math.max(0, Math.min(1, relativeX / containerRect.width));
 
-            console.log('📄 拖拽结束，最终进度:', Math.round(percentage * 100) + '%');
+            console.log('📄 拖拽结束，确认跳转到:', Math.round(percentage * 100) + '%');
 
             // 清除所有定时器
-            if (this.jumpTimer) {
-                clearTimeout(this.jumpTimer);
-                this.jumpTimer = null;
-            }
-            if (this.previewTimer) {
-                clearTimeout(this.previewTimer);
-                this.previewTimer = null;
-            }
+            this.clearJumpTimer();
 
-            // 重置预览位置
-            this.lastPreviewPercentage = null;
-
-            // 立即执行最终跳转（用户已经释放鼠标，确定了目标位置）
+            // 执行最终确认跳转
             this.jumpToProgress(percentage, false);
 
             // 移除全局事件监听器
@@ -278,38 +238,12 @@ const ProgressManager = {
             progressBar.style.width = (percentage * 100) + '%';
             document.getElementById('progressText').textContent = Math.round(percentage * 100) + '%';
 
-            // 记录最后拖拽时间
-            this.lastDragTime = Date.now();
-
             // 清除之前的定时器
-            if (this.jumpTimer) {
-                clearTimeout(this.jumpTimer);
-                this.jumpTimer = null;
-            }
-            if (this.previewTimer) {
-                clearTimeout(this.previewTimer);
-                this.previewTimer = null;
-            }
+            this.clearJumpTimer();
 
-            // 快速预览：如果位置变化超过5%，立即预览
-            const percentageDiff = Math.abs(percentage - (this.lastPreviewPercentage || 0));
-            if (percentageDiff > 0.05) {
-                this.previewTimer = setTimeout(() => {
-                    if (isTouching) {
-                        console.log('📄 快速预览跳转到:', Math.round(percentage * 100) + '%');
-                        this.jumpToProgress(percentage, true); // true表示预览模式
-                        this.lastPreviewPercentage = percentage;
-                    }
-                }, 100); // 100ms快速预览
-            }
-
-            // 确认跳转：用户停止拖拽300ms后执行最终跳转
-            this.jumpTimer = setTimeout(() => {
-                if (isTouching && Date.now() - this.lastDragTime >= 300) {
-                    console.log('📄 用户停止触摸拖拽，确认跳转到:', Math.round(percentage * 100) + '%');
-                    this.jumpToProgress(percentage, false); // false表示确认模式
-                }
-            }, 300);
+            // 实时跳转：locations已可用，无需防抖延迟
+            console.log('📄 实时跳转到:', Math.round(percentage * 100) + '%');
+            this.jumpToProgress(percentage, true); // 实时预览模式
 
             e.preventDefault();
         };
@@ -325,22 +259,12 @@ const ProgressManager = {
             const relativeX = touch.clientX - containerRect.left;
             const percentage = Math.max(0, Math.min(1, relativeX / containerRect.width));
 
-            console.log('📄 触摸拖拽结束，跳转到:', Math.round(percentage * 100) + '%');
+            console.log('📄 触摸拖拽结束，确认跳转到:', Math.round(percentage * 100) + '%');
 
             // 清除所有定时器
-            if (this.jumpTimer) {
-                clearTimeout(this.jumpTimer);
-                this.jumpTimer = null;
-            }
-            if (this.previewTimer) {
-                clearTimeout(this.previewTimer);
-                this.previewTimer = null;
-            }
+            this.clearJumpTimer();
 
-            // 重置预览位置
-            this.lastPreviewPercentage = null;
-
-            // 立即执行最终跳转（用户已经结束触摸，确定了目标位置）
+            // 执行最终确认跳转
             this.jumpToProgress(percentage, false);
 
             e.preventDefault();
@@ -359,17 +283,6 @@ const ProgressManager = {
             return;
         }
 
-        // 预览模式下，如果已经在跳转中，跳过
-        if (isPreview && this.isJumping) {
-            console.log('📄 预览模式：跳过，正在跳转中');
-            return;
-        }
-
-        // 如果已经在跳转中，取消之前的跳转
-        if (this.isJumping && !isPreview) {
-            console.log('📄 取消之前的跳转，执行新的跳转');
-        }
-
         try {
             // 设置跳转标志，防止在跳转过程中被relocated事件覆盖
             this.isJumping = true;
@@ -379,7 +292,7 @@ const ProgressManager = {
             const totalLocations = this.book.locations.total;
             const targetLocation = Math.floor(percentage * totalLocations);
 
-            const jumpType = isPreview ? '预览' : '确认';
+            const jumpType = isPreview ? '实时' : '确认';
             console.log(`📄 ${jumpType}跳转计算 - 总位置数:`, totalLocations, '目标位置:', targetLocation, '百分比:', percentage);
 
             // 获取目标位置的CFI
@@ -392,8 +305,8 @@ const ProgressManager = {
                 if (window.rendition) {
                     window.rendition.display(targetCfi).then(() => {
                         console.log(`📄 ${jumpType}跳转成功`);
-                        // 预览模式使用较短的延迟，确认模式使用较长的延迟
-                        const delay = isPreview ? 200 : 500;
+                        // 实时模式立即重置，确认模式稍微延迟
+                        const delay = isPreview ? 50 : 200;
                         setTimeout(() => {
                             this.isJumping = false;
                             this.targetPercentage = null;
