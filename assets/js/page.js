@@ -27,19 +27,24 @@ const ProgressManager = {
         // 设置book后立即初始化进度条拖拽和退出按钮
         this.initProgressBarDrag();
         this.initExitButton();
-        
+
         // 不在这里恢复进度，等待rendition准备好后再调用
         console.log('📄 等待rendition准备完成后恢复阅读进度');
     },
 
     // 更新当前位置并刷新进度
     updateLocation(location) {
-        console.log('📄 ProgressManager.updateLocation被调用:', location.start.cfi);
+        console.log('📄 [位置更新] ProgressManager.updateLocation被调用');
+        console.log('📄 [位置更新] 新位置CFI:', location.start.cfi);
+        console.log('📄 [位置更新] 位置对象:', location);
+
         this.currentLocation = location;
+        console.log('📄 [位置更新] 当前位置已更新为:', this.currentLocation);
+
         this.updateProgress();
-        
+
         // 移除自动保存逻辑，只在退出时手动保存
-        console.log('📄 位置已更新，但不自动保存（只在退出时保存）');
+        console.log('📄 [位置更新] 位置已更新，但不自动保存（只在退出时保存）');
     },
 
     // 更新进度显示
@@ -440,49 +445,76 @@ const ProgressManager = {
 
     // 初始化退出按钮
     initExitButton() {
+        console.log('📄 [初始化] 开始初始化退出按钮');
         const exitBtn = document.getElementById('exitBtn');
+        console.log('📄 [初始化] 退出按钮元素:', exitBtn);
+
         if (!exitBtn) {
-            console.warn('📄 找不到退出按钮元素');
+            console.warn('📄 [初始化] ❌ 找不到退出按钮元素');
             return;
         }
 
-        exitBtn.addEventListener('click', () => {
+        exitBtn.addEventListener('click', (e) => {
+            console.log('📄 [退出按钮] ========== 退出按钮被点击 ==========');
+            console.log('📄 [退出按钮] 点击时间:', new Date().toLocaleString());
+            console.log('📄 [退出按钮] 事件对象:', e);
+            console.log('📄 [退出按钮] 事件目标:', e.target);
+            console.log('📄 [退出按钮] 开始调用handleExit...');
             this.handleExit();
         });
 
-        console.log('📄 退出按钮初始化完成');
+        console.log('📄 [初始化] ✅ 退出按钮初始化完成');
     },
 
     // 处理退出操作
     handleExit() {
-        console.log('📄 用户点击退出按钮');
-        
+        console.log('📄 [退出] ========== 处理退出操作开始 ==========');
+        console.log('📄 [退出] 退出时间:', new Date().toLocaleString());
+        console.log('📄 [退出] 当前位置信息:', this.currentLocation);
+        console.log('📄 [退出] 书籍信息:', this.book ? '存在' : '不存在');
+
+        if (this.currentLocation) {
+            console.log('📄 [退出] 当前CFI:', this.currentLocation.start.cfi);
+        }
+
+        if (this.book) {
+            console.log('📄 [退出] 书籍标题:', this.book.package?.metadata?.title);
+            console.log('📄 [退出] locations总数:', this.book.locations?.total);
+        }
+
         // 保存当前阅读进度
+        console.log('📄 [退出] 🚀 开始调用保存阅读进度...');
         this.saveReadingProgress();
-        
-        // 返回书架页面
-        this.exitToBookshelf();
+
+        // 延迟返回书架页面，确保保存完成
+        console.log('📄 [退出] ⏰ 设置1秒延迟后返回书架');
+        setTimeout(() => {
+            console.log('📄 [退出] 🏠 延迟时间到，返回书架页面');
+            this.exitToBookshelf();
+        }, 1000); // 给保存操作1秒时间
     },
 
     // 保存阅读进度
     saveReadingProgress() {
-        console.log('📄 [保存进度] 开始保存阅读进度');
-        
+        console.log('📄 [保存进度] ========== 开始保存阅读进度 ==========');
+        console.log('📄 [保存进度] 调用时间:', new Date().toLocaleString());
+        console.log('📄 [保存进度] 调用堆栈:', new Error().stack);
+
         if (!this.currentLocation || !this.book) {
             console.warn('📄 [保存进度] ⚠️ 无法保存进度：缺少位置或书籍信息');
             console.log('📄 [保存进度] - currentLocation:', this.currentLocation);
             console.log('📄 [保存进度] - book:', this.book);
+            console.log('📄 [保存进度] ========== 保存进度结束（失败）==========');
             return;
         }
 
         try {
             const bookId = this.getBookId();
             console.log('📄 [保存进度] 书籍ID:', bookId);
-            
+
             const progressData = {
                 cfi: this.currentLocation.start.cfi,
                 percentage: this.book.locations ? this.book.locations.percentageFromCfi(this.currentLocation.start.cfi) : 0,
-                timestamp: Date.now(),
                 chapterTitle: this.getCurrentChapterTitle()
             };
 
@@ -491,24 +523,74 @@ const ProgressManager = {
             console.log('📄 [保存进度] - 阅读百分比:', Math.round((progressData.percentage || 0) * 100) + '%');
             console.log('📄 [保存进度] - 章节标题:', progressData.chapterTitle);
 
-            // 保存到localStorage
+            // 第一步：先保存到本地存储（确保数据不丢失）
             const storageKey = `epub_progress_${bookId}`;
-            console.log('📄 [保存进度] 使用存储键:', storageKey);
-            
-            localStorage.setItem(storageKey, JSON.stringify(progressData));
-            console.log('📄 [保存进度] ✅ 阅读进度已成功保存到本地存储');
-            
-            // 验证保存是否成功
-            const savedData = localStorage.getItem(storageKey);
-            if (savedData) {
-                console.log('📄 [保存进度] ✅ 验证：数据已成功写入localStorage');
-            } else {
-                console.error('📄 [保存进度] ❌ 验证失败：数据未能写入localStorage');
-            }
+            const localData = {
+                ...progressData,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(storageKey, JSON.stringify(localData));
+            console.log('📄 [保存进度] ✅ 第一步：已保存到本地存储');
+            console.log('📄 [保存进度] 🔑 本地存储键:', storageKey);
+            console.log('📄 [保存进度] 💾 本地存储数据:', localData);
+
+            // 第二步：尝试保存到服务器
+            console.log('📄 [保存进度] 🚀 第二步：开始保存到服务器');
+            this.saveToServer(bookId, progressData);
+
         } catch (error) {
             console.error('📄 [保存进度] ❌ 保存阅读进度失败:', error);
             console.error('📄 [保存进度] 错误堆栈:', error.stack);
+            console.log('📄 [保存进度] ========== 保存进度结束（异常）==========');
         }
+    },
+
+    // 保存到服务器的独立方法
+    saveToServer(bookId, progressData) {
+        console.log('📄 [服务器保存] ========== 开始服务器保存 ==========');
+
+        const requestData = {
+            bookId: bookId,
+            progress: progressData
+        };
+
+        console.log('📄 [服务器保存] 🚀 准备发送POST请求到 /api/progress');
+        console.log('📄 [服务器保存] 📤 请求数据:', JSON.stringify(requestData, null, 2));
+        console.log('📄 [服务器保存] 🌐 开始fetch请求...');
+
+        fetch('/api/progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        })
+            .then(response => {
+                console.log('📄 [服务器保存] 📥 收到服务器响应，状态:', response.status);
+                console.log('📄 [服务器保存] 📥 响应OK:', response.ok);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('📄 [服务器保存] 📋 服务器响应数据:', data);
+                if (data.success) {
+                    console.log('📄 [服务器保存] ✅ 阅读进度已成功保存到服务器');
+                    console.log('📄 [服务器保存] 📅 保存时间戳:', data.timestamp);
+                    console.log('📄 [服务器保存] ========== 服务器保存结束（成功）==========');
+                } else {
+                    console.error('📄 [服务器保存] ❌ 服务器返回错误:', data);
+                    console.log('📄 [服务器保存] ========== 服务器保存结束（服务器错误）==========');
+                }
+            })
+            .catch(error => {
+                console.error('📄 [服务器保存] ❌ 服务器保存失败:', error);
+                console.error('📄 [服务器保存] 🔍 错误类型:', error.name);
+                console.error('📄 [服务器保存] 🔍 错误消息:', error.message);
+                console.error('📄 [服务器保存] 🔍 错误详情:', error.stack);
+                console.log('📄 [服务器保存] ========== 服务器保存结束（失败）==========');
+            });
     },
 
     // 恢复阅读进度
@@ -516,62 +598,90 @@ const ProgressManager = {
         console.log('📄 [恢复进度] 开始恢复阅读进度流程');
         console.log('📄 [恢复进度] 当前book对象:', this.book);
         console.log('📄 [恢复进度] book是否存在:', !!this.book);
-        
+
         if (!this.book) {
             console.warn('📄 [恢复进度] 无法恢复进度：书籍信息未准备好');
             return;
         }
-        
+
         console.log('📄 [恢复进度] book对象验证通过，继续执行...');
 
         try {
             const bookId = this.getBookId();
             console.log('📄 [恢复进度] 获取到书籍ID:', bookId);
-            
-            const storageKey = `epub_progress_${bookId}`;
-            console.log('📄 [恢复进度] 使用存储键:', storageKey);
-            
-            console.log('📄 [恢复进度] 开始从localStorage加载阅读进度...');
-            const savedProgress = localStorage.getItem(storageKey);
-            
-            if (savedProgress) {
-                console.log('📄 [恢复进度] ✅ 从本地存储成功加载到阅读进度数据');
-                console.log('📄 [恢复进度] 原始存储数据:', savedProgress);
-                
-                const progressData = JSON.parse(savedProgress);
-                console.log('📄 [恢复进度] 解析后的进度数据:', progressData);
-                console.log('📄 [恢复进度] - CFI位置:', progressData.cfi);
-                console.log('📄 [恢复进度] - 阅读百分比:', Math.round((progressData.percentage || 0) * 100) + '%');
-                console.log('📄 [恢复进度] - 章节标题:', progressData.chapterTitle);
-                console.log('📄 [恢复进度] - 保存时间:', new Date(progressData.timestamp).toLocaleString());
 
-                // 检查rendition状态
-                if (window.rendition) {
-                    console.log('📄 [恢复进度] ✅ rendition对象可用，开始跳转到保存位置');
-                    
-                    if (progressData.cfi) {
-                        console.log('📄 [恢复进度] 执行跳转到CFI:', progressData.cfi);
-                        
-                        window.rendition.display(progressData.cfi).then(() => {
-                            console.log('📄 [恢复进度] ✅ 阅读进度恢复成功！已跳转到上次阅读位置');
-                            console.log('📄 [恢复进度] 当前显示的CFI:', progressData.cfi);
-                        }).catch((error) => {
-                            console.error('📄 [恢复进度] ❌ 恢复阅读进度失败:', error);
-                            console.error('📄 [恢复进度] 失败的CFI:', progressData.cfi);
-                        });
+            // 首先尝试从服务器获取进度
+            fetch(`/api/progress/${bookId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.progress) {
+                        console.log('📄 [恢复进度] ✅ 从服务器成功加载到阅读进度数据');
+                        console.log('📄 [恢复进度] 服务器进度数据:', data.progress);
+
+                        this.applyProgress(data.progress);
                     } else {
-                        console.warn('📄 [恢复进度] ⚠️ 保存的进度数据中没有CFI信息');
+                        console.log('📄 [恢复进度] 服务器没有进度数据，尝试本地存储');
+                        this.restoreFromLocalStorage(bookId);
                     }
-                } else {
-                    console.error('📄 [恢复进度] ❌ rendition对象不可用，无法恢复进度');
-                }
-            } else {
-                console.log('📄 [恢复进度] ℹ️ 没有找到保存的阅读进度，这可能是第一次阅读此书');
-                console.log('📄 [恢复进度] 检查的存储键:', storageKey);
-            }
+                })
+                .catch(error => {
+                    console.error('📄 [恢复进度] 从服务器获取进度失败，尝试本地存储:', error);
+                    this.restoreFromLocalStorage(bookId);
+                });
+
         } catch (error) {
             console.error('📄 [恢复进度] ❌ 恢复阅读进度时发生异常:', error);
             console.error('📄 [恢复进度] 错误堆栈:', error.stack);
+        }
+    },
+
+    // 从本地存储恢复进度（回退方案）
+    restoreFromLocalStorage(bookId) {
+        const storageKey = `epub_progress_${bookId}`;
+        console.log('📄 [恢复进度] 使用本地存储键:', storageKey);
+
+        const savedProgress = localStorage.getItem(storageKey);
+
+        if (savedProgress) {
+            console.log('📄 [恢复进度] ✅ 从本地存储成功加载到阅读进度数据');
+
+            const progressData = JSON.parse(savedProgress);
+            this.applyProgress(progressData);
+        } else {
+            console.log('📄 [恢复进度] ℹ️ 没有找到保存的阅读进度，这可能是第一次阅读此书');
+        }
+    },
+
+    // 应用进度数据
+    applyProgress(progressData) {
+        console.log('📄 [恢复进度] 解析后的进度数据:', progressData);
+        console.log('📄 [恢复进度] - CFI位置:', progressData.cfi);
+        console.log('📄 [恢复进度] - 阅读百分比:', Math.round((progressData.percentage || 0) * 100) + '%');
+        console.log('📄 [恢复进度] - 章节标题:', progressData.chapterTitle);
+
+        if (progressData.timestamp) {
+            console.log('📄 [恢复进度] - 保存时间:', new Date(progressData.timestamp).toLocaleString());
+        }
+
+        // 检查rendition状态
+        if (window.rendition) {
+            console.log('📄 [恢复进度] ✅ rendition对象可用，开始跳转到保存位置');
+
+            if (progressData.cfi) {
+                console.log('📄 [恢复进度] 执行跳转到CFI:', progressData.cfi);
+
+                window.rendition.display(progressData.cfi).then(() => {
+                    console.log('📄 [恢复进度] ✅ 阅读进度恢复成功！已跳转到上次阅读位置');
+                    console.log('📄 [恢复进度] 当前显示的CFI:', progressData.cfi);
+                }).catch((error) => {
+                    console.error('📄 [恢复进度] ❌ 恢复阅读进度失败:', error);
+                    console.error('📄 [恢复进度] 失败的CFI:', progressData.cfi);
+                });
+            } else {
+                console.warn('📄 [恢复进度] ⚠️ 保存的进度数据中没有CFI信息');
+            }
+        } else {
+            console.error('📄 [恢复进度] ❌ rendition对象不可用，无法恢复进度');
         }
     },
 
@@ -580,11 +690,11 @@ const ProgressManager = {
         // 尝试从URL参数获取书籍ID
         const urlParams = new URLSearchParams(window.location.search);
         const bookParam = urlParams.get('bookId') || urlParams.get('book'); // 支持两种参数名
-        
+
         console.log('📄 [getBookId] URL参数:', window.location.search);
         console.log('📄 [getBookId] bookId参数:', urlParams.get('bookId'));
         console.log('📄 [getBookId] book参数:', urlParams.get('book'));
-        
+
         if (bookParam) {
             console.log('📄 [getBookId] 使用URL参数作为书籍ID:', bookParam);
             return bookParam;
@@ -625,7 +735,7 @@ const ProgressManager = {
         if (this.saveProgressTimer) {
             clearTimeout(this.saveProgressTimer);
         }
-        
+
         this.saveProgressTimer = setTimeout(() => {
             this.saveReadingProgress();
         }, 200); // 改为200ms

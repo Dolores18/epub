@@ -42,5 +42,13 @@
     "book_73bc7ffc_2101765a": "books/book_73bc7ffc_2101765a.epub",
     "book_ca3060eb_3c2349fb": "books/book_ca3060eb_3c2349fb.epub"
   },
-  "saved_at": 1754243716.856988
+  "saved_at": 1754931927.28413,
+  "reading_progress": {
+    "book_73bc7ffc_2101765a": {
+      "cfi": "epubcfi(/6/16!/4/2/1:0)",
+      "percentage": 0.6621392190152802,
+      "chapterTitle": "\n        第六章\n      ",
+      "timestamp": 1754931927284
+    }
+  }
 }

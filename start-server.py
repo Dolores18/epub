@@ -189,6 +189,36 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
             return
         
+        # 处理API路由 /api/progress/<bookId> - 获取阅读进度
+        if path.startswith('/api/progress/'):
+            book_id = path[13:]  # 移除 '/api/progress/' 前缀
+            print(f"📖 获取阅读进度: {book_id}")
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.end_headers()
+            
+            # 从books_data.json加载最新数据
+            progress_data = None
+            try:
+                if os.path.exists(BOOKS_DATA_FILE):
+                    with open(BOOKS_DATA_FILE, 'r', encoding='utf-8') as f:
+                        books_data = json.load(f)
+                    
+                    reading_progress = books_data.get('reading_progress', {})
+                    progress_data = reading_progress.get(book_id)
+            except Exception as e:
+                print(f"❌ 读取阅读进度失败: {e}")
+            
+            response = {
+                'success': True,
+                'bookId': book_id,
+                'progress': progress_data
+            }
+            
+            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+            return
+        
         # 处理API路由 /api/book/<bookId> - 获取特定书籍的文件
         if path.startswith('/api/book/'):
             book_id = path[10:]  # 移除 '/api/book/' 前缀
@@ -410,6 +440,73 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 print(f"❌ 文件上传失败: {e}")
                 self.send_error(500, f"Upload failed: {str(e)}")
+            
+            return
+        
+        # 处理阅读进度保存 /api/progress
+        if path == '/api/progress':
+            try:
+                # 读取JSON数据
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                
+                # 解析JSON
+                progress_data = json.loads(post_data.decode('utf-8'))
+                
+                book_id = progress_data.get('bookId')
+                progress_info = progress_data.get('progress')
+                
+                if not book_id or not progress_info:
+                    self.send_error(400, "Missing bookId or progress data")
+                    return
+                
+                print(f"📖 保存阅读进度: {book_id}")
+                print(f"📖 进度数据: CFI={progress_info.get('cfi', 'N/A')}, 百分比={progress_info.get('percentage', 0)*100:.1f}%")
+                
+                # 加载现有数据
+                books_data = {}
+                if os.path.exists(BOOKS_DATA_FILE):
+                    with open(BOOKS_DATA_FILE, 'r', encoding='utf-8') as f:
+                        books_data = json.load(f)
+                
+                # 确保reading_progress字段存在
+                if 'reading_progress' not in books_data:
+                    books_data['reading_progress'] = {}
+                
+                # 保存进度数据
+                books_data['reading_progress'][book_id] = {
+                    'cfi': progress_info.get('cfi'),
+                    'percentage': progress_info.get('percentage', 0),
+                    'chapterTitle': progress_info.get('chapterTitle', '未知章节'),
+                    'timestamp': int(time.time() * 1000)  # 使用毫秒时间戳
+                }
+                
+                # 更新保存时间
+                books_data['saved_at'] = time.time()
+                
+                # 写入文件
+                with open(BOOKS_DATA_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(books_data, f, ensure_ascii=False, indent=2)
+                
+                print(f"✅ 阅读进度已保存到 {BOOKS_DATA_FILE}")
+                
+                # 返回成功响应
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.end_headers()
+                
+                response = {
+                    'success': True,
+                    'message': '阅读进度保存成功',
+                    'bookId': book_id,
+                    'timestamp': books_data['reading_progress'][book_id]['timestamp']
+                }
+                
+                self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                
+            except Exception as e:
+                print(f"❌ 保存阅读进度失败: {e}")
+                self.send_error(500, f"Save progress failed: {str(e)}")
             
             return
         
