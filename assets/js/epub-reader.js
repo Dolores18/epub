@@ -39,6 +39,74 @@ let book;
 let rendition;
 let currentLocation;
 let isLocationsGenerating = false; // 防止重复生成locations的标志
+
+// Locations本地存储管理
+async function getBookId(book) {
+    // 获取书籍的唯一标识
+    const urlParams = new URLSearchParams(window.location.search);
+    const bookId = urlParams.get('bookId') || urlParams.get('book');
+
+    if (bookId) {
+        return bookId;
+    }
+
+    // 如果没有URL参数，使用书籍标题
+    if (book && book.package && book.package.metadata) {
+        const title = book.package.metadata.title;
+        return title ? title.replace(/[^a-zA-Z0-9]/g, '_') : 'unknown_book';
+    }
+
+    return 'unknown_book';
+}
+
+async function saveLocationsToLocal(book) {
+    try {
+        const bookId = await getBookId(book);
+        const locationsData = {
+            locations: book.locations._locations,
+            total: book.locations.total,
+            timestamp: Date.now()
+        };
+
+        const storageKey = `epub_locations_${bookId}`;
+        localStorage.setItem(storageKey, JSON.stringify(locationsData));
+
+        console.log('📍 [Locations] ✅ 已保存到本地存储');
+        console.log('📍 [Locations] 存储键:', storageKey);
+        console.log('📍 [Locations] 位置点数量:', locationsData.total);
+    } catch (error) {
+        console.error('📍 [Locations] ❌ 保存到本地失败:', error);
+    }
+}
+
+async function loadLocationsFromLocal(book) {
+    try {
+        const bookId = await getBookId(book);
+        const storageKey = `epub_locations_${bookId}`;
+        const savedData = localStorage.getItem(storageKey);
+
+        if (savedData) {
+            const locationsData = JSON.parse(savedData);
+
+            // 恢复locations数据
+            book.locations._locations = locationsData.locations;
+            book.locations.total = locationsData.total;
+
+            console.log('📍 [Locations] ✅ 从本地存储加载成功');
+            console.log('📍 [Locations] 存储键:', storageKey);
+            console.log('📍 [Locations] 位置点数量:', locationsData.total);
+            console.log('📍 [Locations] 保存时间:', new Date(locationsData.timestamp).toLocaleString());
+
+            return true;
+        } else {
+            console.log('📍 [Locations] 本地存储中没有locations数据');
+            return false;
+        }
+    } catch (error) {
+        console.error('📍 [Locations] ❌ 从本地加载失败:', error);
+        return false;
+    }
+}
 let importedUrl = null;
 let currentPage = 0;  // 当前页面索引
 let totalPages = 0;   // 总页数
@@ -289,15 +357,21 @@ async function initReader(file = null) {
             console.log('📄 [epub-reader.js] 准备生成locations，当前book:', book);
             console.log('📄 [epub-reader.js] window.ProgressManager存在:', !!window.ProgressManager);
             try {
-                // 使用全局标志防止重复生成
+                // 尝试从本地加载locations
+                await loadLocationsFromLocal(book);
+
+                // 如果本地没有或加载失败，则生成并保存
                 if (!isLocationsGenerating && book.locations.total === 0) {
-                    console.log('📄 [epub-reader.js] locations未生成，开始生成...');
-                    isLocationsGenerating = true; // 设置标志
+                    console.log('📄 [epub-reader.js] 本地无locations，开始生成...');
+                    isLocationsGenerating = true;
                     await book.locations.generate(1024);
                     console.log('📄 [epub-reader.js] locations生成完成，总数:', book.locations.total);
-                    isLocationsGenerating = false; // 重置标志
+
+                    // 保存到本地
+                    await saveLocationsToLocal(book);
+                    isLocationsGenerating = false;
                 } else {
-                    console.log('📄 [epub-reader.js] locations已存在或正在生成中，跳过生成，总数:', book.locations.total);
+                    console.log('📄 [epub-reader.js] locations已可用，总数:', book.locations.total);
                 }
                 // 使用ProgressManager设置book对象
                 if (window.ProgressManager) {
@@ -368,15 +442,21 @@ async function initReader(file = null) {
 
             await loadTOC();
             setupEventListeners();
-            // 使用全局标志防止重复生成
+            // 尝试从本地加载locations
+            await loadLocationsFromLocal(book);
+
+            // 如果本地没有或加载失败，则生成并保存
             if (!isLocationsGenerating && book.locations.total === 0) {
-                console.log('📄 [epub-reader.js] locations未生成，开始生成...');
-                isLocationsGenerating = true; // 设置标志
+                console.log('📄 [epub-reader.js] 本地无locations，开始生成...');
+                isLocationsGenerating = true;
                 await book.locations.generate(1024);
                 console.log('📄 [epub-reader.js] locations生成完成，总数:', book.locations.total);
-                isLocationsGenerating = false; // 重置标志
+
+                // 保存到本地
+                await saveLocationsToLocal(book);
+                isLocationsGenerating = false;
             } else {
-                console.log('📄 [epub-reader.js] locations已存在或正在生成中，跳过生成，总数:', book.locations.total);
+                console.log('📄 [epub-reader.js] locations已可用，总数:', book.locations.total);
             }
             // 使用ProgressManager设置book对象
             if (window.ProgressManager) {
@@ -443,7 +523,7 @@ function showEpubMetadata() {
 // 设置事件监听器
 function setupEventListeners() {
     // 位置变化监听
-    rendition.on('relocated', (location) => {
+    rendition.on('relocated', async (location) => {
         console.log('📍 relocated事件触发，当前起始位置CFI:', location.start.cfi);
 
         currentLocation = location;
@@ -456,25 +536,32 @@ function setupEventListeners() {
                 window.ProgressManager.setBook(book);
             }
 
-            // 如果locations为空，尝试生成
-            if (book && book.locations && !isLocationsGenerating && book.locations.total === 0) {
-                console.log('📍 [修复] locations为空，尝试生成');
-                isLocationsGenerating = true; // 设置标志
-                book.locations.generate(1024).then(() => {
-                    console.log('📍 [修复] locations生成完成，总数:', book.locations.total);
-                    isLocationsGenerating = false; // 重置标志
-                    window.ProgressManager.setBook(book);
-                    window.ProgressManager.updateLocation(location);
-                }).catch((error) => {
-                    console.error('📍 [修复] locations生成失败:', error);
-                    isLocationsGenerating = false; // 出错时也要重置标志
-                });
-            } else {
-                if (isLocationsGenerating) {
-                    console.log('📍 [修复] locations正在生成中，跳过');
-                } else {
-                    console.log('📍 [修复] locations已存在，直接更新位置');
+            // 先尝试从本地加载locations
+            if (book && book.locations && book.locations.total === 0) {
+                const loaded = await loadLocationsFromLocal(book);
+                if (!loaded && !isLocationsGenerating) {
+                    console.log('📍 [修复] 本地无locations，开始生成');
+                    isLocationsGenerating = true;
+                    book.locations.generate(1024).then(() => {
+                        console.log('📍 [修复] locations生成完成，总数:', book.locations.total);
+                        // 保存到本地
+                        saveLocationsToLocal(book);
+                        isLocationsGenerating = false;
+                        window.ProgressManager.setBook(book);
+                        window.ProgressManager.updateLocation(location);
+                    }).catch((error) => {
+                        console.error('📍 [修复] locations生成失败:', error);
+                        isLocationsGenerating = false;
+                    });
+                    return; // 等待生成完成
                 }
+            }
+
+            // locations已可用，直接更新位置
+            if (isLocationsGenerating) {
+                console.log('📍 [修复] locations正在生成中，跳过位置更新');
+            } else {
+                console.log('📍 [修复] locations已可用，更新位置');
                 window.ProgressManager.updateLocation(location);
             }
         } else {
@@ -1345,6 +1432,38 @@ async function loadBookFromAPI(bookId) {
             console.log('📚 目录加载成功');
         } catch (tocError) {
             console.error('📚 目录加载失败:', tocError);
+        }
+
+        // 处理locations - 这是关键！
+        console.log('📚 处理locations...');
+        try {
+            // 尝试从本地加载locations
+            await loadLocationsFromLocal(book);
+
+            // 如果本地没有或加载失败，则生成并保存
+            if (!isLocationsGenerating && book.locations.total === 0) {
+                console.log('📚 本地无locations，开始生成...');
+                isLocationsGenerating = true;
+                await book.locations.generate(1024);
+                console.log('📚 locations生成完成，总数:', book.locations.total);
+
+                // 保存到本地
+                await saveLocationsToLocal(book);
+                isLocationsGenerating = false;
+            } else {
+                console.log('📚 locations已可用，总数:', book.locations.total);
+            }
+
+            // 使用ProgressManager设置book对象
+            if (window.ProgressManager) {
+                console.log('📚 调用ProgressManager.setBook');
+                window.ProgressManager.setBook(book);
+                console.log('📚 book对象已设置到ProgressManager');
+            } else {
+                console.warn('📚 ProgressManager未找到');
+            }
+        } catch (locationError) {
+            console.error('📚 locations处理失败:', locationError);
         }
 
         // 设置事件监听器
