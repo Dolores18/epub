@@ -684,7 +684,7 @@ def main():
     READING_PROGRESS = data_manager.reading_progress
     
     # 固定使用8080端口
-    port = 8080
+    port = 8088
     
     try:
         # 创建服务器并设置端口重用
