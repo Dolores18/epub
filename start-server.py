@@ -691,10 +691,24 @@ def main():
         class ReusableTCPServer(socketserver.TCPServer):
             allow_reuse_address = True  # 关键：允许端口重用
             
-        with ReusableTCPServer(("", port), MyHTTPRequestHandler) as httpd:
+        with ReusableTCPServer(("0.0.0.0", port), MyHTTPRequestHandler) as httpd:
+            # 获取本机IP地址
+            try:
+                # 创建一个临时socket来获取本机IP
+                temp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                temp_socket.connect(("8.8.8.8", 80))
+                local_ip = temp_socket.getsockname()[0]
+                temp_socket.close()
+            except:
+                # 如果获取失败，使用hostname方式
+                hostname = socket.gethostname()
+                local_ip = socket.gethostbyname(hostname)
+            
             print(f"🚀 HTTP 服务器已启动")
-            print(f"� 请请在浏览器中访问: http://localhost:{port}/")
-            print(f"� 阅务读器页面: http://localhost:{port}/epub-reader.html")
+            print(f"🌐 本地访问: http://localhost:{port}/")
+            print(f"🌐 局域网访问: http://{local_ip}:{port}/")
+            print(f"📚 阅读器页面: http://localhost:{port}/epub-reader.html")
+            print(f"📱 移动设备访问: http://{local_ip}:{port}/")
             print(f"📁 服务目录: {os.getcwd()}")
             print(f"⏹️  按 Ctrl+C 停止服务器")
             print("-" * 50)
