@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多语言词典测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>多语言词典功能测试</h1>
+    
+    <div class="test-section">
+        <h3>1. 语言检测测试</h3>
+        <button onclick="testLanguageDetection()">测试语言检测</button>
+        <div id="langResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. API端点选择测试</h3>
+        <button onclick="testApiEndpoint('ja', 'こんにちは')">测试日语API</button>
+        <button onclick="testApiEndpoint('en', 'hello')">测试英语API</button>
+        <button onclick="testApiEndpoint('zh', '你好')">测试中文API</button>
+        <div id="apiResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 词典界面文本测试</h3>
+        <button onclick="testDictionaryTexts('ja')">日语界面</button>
+        <button onclick="testDictionaryTexts('en')">英语界面</button>
+        <button onclick="testDictionaryTexts('zh')">中文界面</button>
+        <div id="textResult" class="result"></div>
+    </div>
+
+    <script>
+        // 模拟全局函数
+        window.getCurrentBookLanguage = function() {
+            return window.testLanguage || 'ja';
+        };
+
+        // 模拟词典功能的部分函数
+        function getDictionaryTexts(language) {
+            const lang = language ? language.toLowerCase() : 'ja';
+            
+            if (lang === 'en' || lang === 'english' || lang.startsWith('en-')) {
+                return {
+                    title: '📚 English Dictionary',
+                    placeholder: 'Enter English word to search...',
+                    description: 'Supports: words, phrases, etc.',
+                    searchPlaceholder: '选中文本或输入英语单词进行查询'
+                };
+            } else if (lang === 'zh' || lang === 'chinese' || lang.startsWith('zh-')) {
+                return {
+                    title: '📚 中文词典查询',
+                    placeholder: 'Enter Chinese word to search...',
+                    description: '支持：汉字、词语等',
+                    searchPlaceholder: '选中文本或输入中文词语进行查询'
+                };
+            } else {
+                return {
+                    title: '📚 日语词典查询',
+                    placeholder: '输入日语单词进行查询...',
+                    description: '支持：汉字、假名、片假名等',
+                    searchPlaceholder: '选中文本或输入单词进行查询'
+                };
+            }
+        }
+
+        function getApiEndpoint(language, word) {
+            const lang = language ? language.toLowerCase() : 'ja';
+            
+            if (lang === 'ja' || lang === 'jp' || lang === 'japanese' || lang.startsWith('ja-')) {
+                const url = `https://language.3049589.xyz/api/japanese/${encodeURIComponent(word)}?definition`;
+                return { url, type: 'japanese' };
+            } else if (lang === 'en' || lang === 'english' || lang.startsWith('en-')) {
+                const url = `https://language.3049589.xyz/api/stardict/${encodeURIComponent(word)}`;
+                return { url, type: 'english' };
+            } else if (lang === 'zh' || lang === 'chinese' || lang.startsWith('zh-')) {
+                const url = `https://language.3049589.xyz/api/stardict/${encodeURIComponent(word)}`;
+                return { url, type: 'english' };
+            }
+            
+            const url = `https://language.3049589.xyz/api/japanese/${encodeURIComponent(word)}?definition`;
+            return { url, type: 'japanese' };
+        }
+
+        // 测试函数
+        function testLanguageDetection() {
+            const result = document.getElementById('langResult');
+            const currentLang = getCurrentBookLanguage();
+            result.innerHTML = `
+                <strong>当前检测到的语言:</strong> ${currentLang || '未检测到'}<br>
+                <strong>函数是否存在:</strong> ${typeof getCurrentBookLanguage === 'function' ? '是' : '否'}
+            `;
+        }
+
+        function testApiEndpoint(lang, word) {
+            window.testLanguage = lang;
+            const apiInfo = getApiEndpoint(lang, word);
+            const result = document.getElementById('apiResult');
+            result.innerHTML = `
+                <strong>语言:</strong> ${lang}<br>
+                <strong>测试单词:</strong> ${word}<br>
+                <strong>API类型:</strong> ${apiInfo.type}<br>
+                <strong>API URL:</strong> ${apiInfo.url}
+            `;
+        }
+
+        function testDictionaryTexts(lang) {
+            window.testLanguage = lang;
+            const texts = getDictionaryTexts(lang);
+            const result = document.getElementById('textResult');
+            result.innerHTML = `
+                <strong>语言:</strong> ${lang}<br>
+                <strong>标题:</strong> ${texts.title}<br>
+                <strong>搜索框占位符:</strong> ${texts.placeholder}<br>
+                <strong>描述:</strong> ${texts.description}<br>
+                <strong>搜索提示:</strong> ${texts.searchPlaceholder}
+            `;
+        }
+    </script>
+</body>
+</html>
+</text>
+</invoke>

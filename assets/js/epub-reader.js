@@ -39,6 +39,7 @@ let book;
 let rendition;
 let currentLocation;
 let isLocationsGenerating = false; // 防止重复生成locations的标志
+let currentBookLanguage = null; // 当前书籍语言
 
 // Locations本地存储管理
 async function getBookId(book) {
@@ -175,6 +176,16 @@ function getFontFamilyByLanguage(language) {
 
 // 应用基于语言的字体设置
 function applyLanguageBasedFont(language) {
+    // 保存当前语言到全局变量
+    currentBookLanguage = language;
+    console.log('📚 保存当前书籍语言:', currentBookLanguage);
+    
+    // 通知词典功能语言已更新
+    if (window.Dictionary && window.Dictionary.onLanguageUpdated) {
+        console.log('📚 通知词典功能语言已更新');
+        window.Dictionary.onLanguageUpdated(language);
+    }
+    
     const fontFamily = getFontFamilyByLanguage(language);
 
     if (!fontFamily) {
@@ -226,6 +237,14 @@ function applyLanguageBasedFont(language) {
 
 // 强制禁用缓存 - 版本 2.0
 console.log('🔄 强制禁用缓存 v2.0，当前时间戳:', Date.now());
+
+// 提供获取当前书籍语言的全局接口
+function getCurrentBookLanguage() {
+    return currentBookLanguage;
+}
+
+// 将函数暴露到全局作用域，供词典功能使用
+window.getCurrentBookLanguage = getCurrentBookLanguage;
 
 // 添加调试日志
 function debugLog(message, data = null) {

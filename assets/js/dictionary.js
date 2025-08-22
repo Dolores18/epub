@@ -55,6 +55,15 @@ function initDictionary() {
     // 初始化按钮状态
     updateDictionaryButtonState();
 
+    // 检测并更新语言相关文本
+    setTimeout(() => {
+        const currentLanguage = window.getCurrentBookLanguage ? window.getCurrentBookLanguage() : null;
+        if (currentLanguage) {
+            console.log('🌐 检测到书籍语言，更新词典界面:', currentLanguage);
+            updateDictionaryTexts();
+        }
+    }, 1000); // 延迟1秒确保语言检测完成
+
     console.log('✅ 词典功能初始化完成');
 }
 
@@ -72,6 +81,35 @@ function updateDictionaryButtonState() {
     }
 }
 
+// 获取词典面板的语言相关文本
+function getDictionaryTexts(language) {
+    const lang = language ? language.toLowerCase() : 'ja';
+    
+    if (lang === 'en' || lang === 'english' || lang.startsWith('en-')) {
+        return {
+            title: '📚 词典查询',
+            placeholder: 'Enter English word to search...',
+            description: 'Supports: words, phrases, etc.',
+            searchPlaceholder: '选中文本或输入英语单词进行查询'
+        };
+    } else if (lang === 'zh' || lang === 'chinese' || lang.startsWith('zh-')) {
+        return {
+            title: '📚 词典查询',
+            placeholder: 'Enter Chinese word to search...',
+            description: '支持：汉字、词语等',
+            searchPlaceholder: '选中文本或输入中文词语进行查询'
+        };
+    } else {
+        // 默认日语
+        return {
+            title: '📚 词典查询',
+            placeholder: '输入日语单词进行查询...',
+            description: '支持：汉字、假名、片假名等',
+            searchPlaceholder: '选中文本或输入单词进行查询'
+        };
+    }
+}
+
 // 创建词典查询面板
 function createDictionaryPanel() {
     // 检查是否已存在
@@ -79,23 +117,27 @@ function createDictionaryPanel() {
         return;
     }
 
+    // 获取当前语言的文本
+    const currentLanguage = window.getCurrentBookLanguage ? window.getCurrentBookLanguage() : 'ja';
+    const texts = getDictionaryTexts(currentLanguage);
+
     const panel = document.createElement('div');
     panel.id = 'dictionaryPanel';
     panel.className = 'dictionary-panel';
     panel.innerHTML = `
         <div class="dictionary-header">
-            <h3>📚 日语词典查询</h3>
+            <h3 id="dictTitle">${texts.title}</h3>
             <button class="close-dict-btn" onclick="hideDictionary()">×</button>
         </div>
         <div class="dictionary-content">
             <div class="search-box">
-                <input type="text" id="dictSearchInput" placeholder="输入日语单词进行查询...">
+                <input type="text" id="dictSearchInput" placeholder="${texts.placeholder}">
                 <button onclick="searchWord()">🔍</button>
             </div>
             <div class="word-info" id="wordInfo">
-                <p class="placeholder">选中文本或输入单词进行查询</p>
+                <p class="placeholder">${texts.searchPlaceholder}</p>
                 <p class="placeholder" style="font-size: 12px; margin-top: 10px;">
-                    支持：汉字、假名、片假名等
+                    ${texts.description}
                 </p>
             </div>
             <div class="dict-controls">
@@ -519,24 +561,55 @@ async function showWordInfo(word) {
 
         if (result) {
             console.log('✅ 查询成功，开始渲染结果...');
-            const htmlContent = `
-                <div class="word-entry">
-                    <h4>${word}</h4>
-                    ${result.reading ? `<div class="word-reading">${result.reading}</div>` : ''}
-                    ${result.writings ? `<div class="word-writings">书写形式: ${result.writings}</div>` : ''}
-                    <div class="word-meaning">${result.meaning}</div>
-                    <span class="word-type">${result.type}</span>
-                    ${result.source ? `<div class="word-source">来源: ${result.source}</div>` : ''}
-                    ${result.examples && result.examples.length > 0 ? `
-                        <div class="word-examples">
-                            <h5>例句：</h5>
-                            <ul>
-                                ${result.examples.map(example => `<li>${example}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
+            
+            // 根据来源类型渲染不同的内容
+            let htmlContent = '';
+            
+            if (result.source === '英语词典') {
+                // 英语词典结果显示
+                htmlContent = `
+                    <div class="word-entry">
+                        <h4>${word}</h4>
+                        ${result.reading ? `<div class="word-reading">发音: /${result.reading}/</div>` : ''}
+                        ${result.writings && result.writings !== word ? `<div class="word-writings">单词: ${result.writings}</div>` : ''}
+                        <div class="word-meaning">${result.meaning}</div>
+                        <span class="word-type">${result.type}</span>
+                        ${result.collins ? `<div class="word-source">柯林斯词典等级: ${result.collins}</div>` : ''}
+                        ${result.oxford ? `<div class="word-source">牛津词典收录: ${result.oxford ? '是' : '否'}</div>` : ''}
+                        ${result.bnc ? `<div class="word-source">BNC频率: ${result.bnc}</div>` : ''}
+                        ${result.frq ? `<div class="word-source">使用频率: ${result.frq}</div>` : ''}
+                        <div class="word-source">来源: ${result.source}</div>
+                        ${result.examples && result.examples.length > 0 ? `
+                            <div class="word-examples">
+                                <h5>例句：</h5>
+                                <ul>
+                                    ${result.examples.map(example => `<li>${example}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                // 日语词典结果显示（原有格式）
+                htmlContent = `
+                    <div class="word-entry">
+                        <h4>${word}</h4>
+                        ${result.reading ? `<div class="word-reading">${result.reading}</div>` : ''}
+                        ${result.writings ? `<div class="word-writings">书写形式: ${result.writings}</div>` : ''}
+                        <div class="word-meaning">${result.meaning}</div>
+                        <span class="word-type">${result.type}</span>
+                        ${result.source ? `<div class="word-source">来源: ${result.source}</div>` : ''}
+                        ${result.examples && result.examples.length > 0 ? `
+                            <div class="word-examples">
+                                <h5>例句：</h5>
+                                <ul>
+                                    ${result.examples.map(example => `<li>${example}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
 
             console.log('🔍 生成的HTML内容:', htmlContent);
             wordInfo.innerHTML = htmlContent;
@@ -650,6 +723,37 @@ function toggleDictionary() {
     }
 }
 
+// 动态更新词典面板标题和文本
+function updateDictionaryTexts() {
+    const currentLanguage = window.getCurrentBookLanguage ? window.getCurrentBookLanguage() : 'ja';
+    const texts = getDictionaryTexts(currentLanguage);
+    
+    // 更新标题
+    const titleElement = document.getElementById('dictTitle');
+    if (titleElement) {
+        titleElement.textContent = texts.title;
+    }
+    
+    // 更新搜索框占位符
+    const searchInput = document.getElementById('dictSearchInput');
+    if (searchInput) {
+        searchInput.placeholder = texts.placeholder;
+    }
+    
+    // 更新默认提示文本
+    const wordInfo = document.getElementById('wordInfo');
+    if (wordInfo && wordInfo.querySelector('.placeholder')) {
+        wordInfo.innerHTML = `
+            <p class="placeholder">${texts.searchPlaceholder}</p>
+            <p class="placeholder" style="font-size: 12px; margin-top: 10px;">
+                ${texts.description}
+            </p>
+        `;
+    }
+    
+    console.log('📚 已更新词典面板文本，当前语言:', currentLanguage);
+}
+
 // 显示词典面板
 function showDictionary() {
     console.log('🎯 ===== showDictionary() 被调用 =====');
@@ -663,6 +767,10 @@ function showDictionary() {
 
     if (dictionaryPanel) {
         console.log('🔍 面板当前类名:', dictionaryPanel.className);
+        
+        // 更新词典面板文本（根据当前语言）
+        updateDictionaryTexts();
+        
         console.log('🔍 添加 show 类到词典面板');
         dictionaryPanel.classList.add('show');
 
@@ -743,20 +851,83 @@ function showNotification(message) {
     }, 2000);
 }
 
-// 在线词典API调用
-async function fetchOnlineDictionary(word) {
+// 根据语言选择API端点
+function getApiEndpoint(language, word) {
+    const lang = language ? language.toLowerCase() : 'ja';
+    
+    console.log('🌐 选择API端点，语言:', lang);
+    
+    if (lang === 'ja' || lang === 'jp' || lang === 'japanese' || lang.startsWith('ja-')) {
+        const url = `https://language.3049589.xyz/api/japanese/${encodeURIComponent(word)}?definition`;
+        console.log('🇯🇵 使用日语API:', url);
+        return { url, type: 'japanese' };
+    } else if (lang === 'en' || lang === 'english' || lang.startsWith('en-')) {
+        const url = `https://language.3049589.xyz/api/stardict/${encodeURIComponent(word)}`;
+        console.log('🇺🇸 使用英语API:', url);
+        return { url, type: 'english' };
+    } else if (lang === 'zh' || lang === 'chinese' || lang.startsWith('zh-')) {
+        // 中文暂时使用英语API作为备选
+        const url = `https://language.3049589.xyz/api/stardict/${encodeURIComponent(word)}`;
+        console.log('🇨🇳 中文使用英语API作为备选:', url);
+        return { url, type: 'english' };
+    }
+    
+    // 默认使用日语API
+    const url = `https://language.3049589.xyz/api/japanese/${encodeURIComponent(word)}?definition`;
+    console.log('🌍 默认使用日语API:', url);
+    return { url, type: 'japanese' };
+}
+
+// 处理英语词典API响应
+async function fetchEnglishDictionary(apiUrl, word) {
     try {
-        console.log('🔍 查询在线词典:', word);
-
-        // 使用提供的日语词典API
-        const response = await fetch(`https://language.3049589.xyz/api/japanese/${encodeURIComponent(word)}?definition`);
+        console.log('🔍 查询英语词典:', word, apiUrl);
+        
+        const response = await fetch(apiUrl);
         const data = await response.json();
+        
+        console.log('📚 英语API响应:', data);
+        
+        if (data && data.word) {
+            // 根据你提供的API响应格式处理
+            const result = {
+                reading: data.phonetic || '',
+                meaning: data.translation || data.definition || '',
+                type: data.pos || 'word',
+                examples: [], // 英语API暂时没有例句
+                writings: data.word || word,
+                source: '英语词典',
+                collins: data.collins,
+                oxford: data.oxford,
+                bnc: data.bnc,
+                frq: data.frq
+            };
+            
+            console.log('📚 处理后的英语结果:', result);
+            return result;
+        } else {
+            console.log('❌ 英语API返回失败或未找到单词:', word, data);
+            return null;
+        }
+    } catch (error) {
+        console.error('❌ 英语词典查询失败:', error);
+        return null;
+    }
+}
 
-        console.log('📚 API响应:', data);
-
+// 处理日语词典API响应
+async function fetchJapaneseDictionary(apiUrl, word) {
+    try {
+        console.log('🔍 查询日语词典:', word, apiUrl);
+        
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        
+        console.log('📚 日语API响应:', data);
+        
         if (data.success && data.found && data.data) {
             const entry = data.data;
-            console.log('📚 处理API数据:', entry);
+            console.log('📚 处理日语API数据:', entry);
 
             // 构建读音信息
             let reading = '';
@@ -792,14 +963,38 @@ async function fetchOnlineDictionary(word) {
                 type: partOfSpeech || '名词',
                 examples: examples,
                 writings: writings,
-                source: entry.source || '在线词典'
+                source: entry.source || '日语词典'
             };
 
-            console.log('📚 处理后的结果:', result);
+            console.log('📚 处理后的日语结果:', result);
             return result;
         } else {
-            console.log('❌ API返回失败或未找到单词:', word, data);
+            console.log('❌ 日语API返回失败或未找到单词:', word, data);
             return null;
+        }
+    } catch (error) {
+        console.error('❌ 日语词典查询失败:', error);
+        return null;
+    }
+}
+
+// 在线词典API调用
+async function fetchOnlineDictionary(word) {
+    try {
+        console.log('🔍 查询在线词典:', word);
+        
+        // 获取当前书籍语言
+        const currentLanguage = window.getCurrentBookLanguage ? window.getCurrentBookLanguage() : 'ja';
+        console.log('📚 当前书籍语言:', currentLanguage);
+        
+        // 根据语言选择API端点
+        const apiInfo = getApiEndpoint(currentLanguage, word);
+        
+        // 根据API类型调用相应的处理函数
+        if (apiInfo.type === 'english') {
+            return await fetchEnglishDictionary(apiInfo.url, word);
+        } else {
+            return await fetchJapaneseDictionary(apiInfo.url, word);
         }
     } catch (error) {
         console.error('❌ 在线词典查询失败:', error);
@@ -817,10 +1012,14 @@ function clearSearch() {
     }
 
     if (wordInfo) {
+        // 根据当前语言显示相应的提示文本
+        const currentLanguage = window.getCurrentBookLanguage ? window.getCurrentBookLanguage() : 'ja';
+        const texts = getDictionaryTexts(currentLanguage);
+        
         wordInfo.innerHTML = `
-            <p class="placeholder">选中文本或输入单词进行查询</p>
+            <p class="placeholder">${texts.searchPlaceholder}</p>
             <p class="placeholder" style="font-size: 12px; margin-top: 10px;">
-                支持：汉字、假名、片假名等
+                ${texts.description}
             </p>
         `;
     }
@@ -1083,7 +1282,7 @@ function showDictionaryWithResult(word, result) {
     // 创建词典面板HTML
     const panelHTML = `
         <div class="dictionary-header">
-            <h3>📚 日语词典查询</h3>
+            <h3>📚 词典查询</h3>
             <button class="close-dict-btn" onclick="hideDictionaryModal()">×</button>
         </div>
         <div class="dictionary-content">
@@ -1117,7 +1316,7 @@ function showDictionaryWithError(word, errorMessage) {
 
     const panelHTML = `
         <div class="dictionary-header">
-            <h3>📚 日语词典查询</h3>
+            <h3>📚 词典查询</h3>
             <button class="close-dict-btn" onclick="hideDictionaryModal()">×</button>
         </div>
         <div class="dictionary-content">
@@ -1183,6 +1382,12 @@ function hideDictionaryModal() {
     }
 }
 
+// 语言更新通知接口
+function onLanguageUpdated(language) {
+    console.log('📚 词典功能收到语言更新通知:', language);
+    updateDictionaryTexts();
+}
+
 // 导出函数供外部使用
 window.Dictionary = {
     init: initDictionary,
@@ -1195,7 +1400,9 @@ window.Dictionary = {
     clear: clearSearch,
     test: testEpubTextSelection,
     bindRendition: bindRenditionManually,
-    forceRebind: forceRebind
+    forceRebind: forceRebind,
+    onLanguageUpdated: onLanguageUpdated,
+    updateTexts: updateDictionaryTexts
 };
 
 // 自动初始化
