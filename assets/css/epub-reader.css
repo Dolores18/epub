@@ -119,31 +119,7 @@ body {
     opacity: 0.8;
 }
 
-/* 文件导入样式 */
-.file-import {
-    margin-top: 1rem;
-}
-
-#importEpub {
-    display: none;
-}
-
-.import-btn {
-    display: inline-block;
-    padding: 0.7rem 1.2rem;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 25px;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.9rem;
-}
-
-.import-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: translateY(-1px);
-}
+/* 文件导入样式已移除 */
 
 /* 目录区域 */
 .toc-section {

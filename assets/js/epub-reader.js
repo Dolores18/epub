@@ -40,6 +40,7 @@ let rendition;
 let currentLocation;
 let isLocationsGenerating = false; // 防止重复生成locations的标志
 let currentBookLanguage = null; // 当前书籍语言
+let currentBookMetadata = null; // 当前书籍元数据
 
 // Locations本地存储管理
 async function getBookId(book) {
@@ -179,13 +180,13 @@ function applyLanguageBasedFont(language) {
     // 保存当前语言到全局变量
     currentBookLanguage = language;
     console.log('📚 保存当前书籍语言:', currentBookLanguage);
-    
+
     // 通知词典功能语言已更新
     if (window.Dictionary && window.Dictionary.onLanguageUpdated) {
         console.log('📚 通知词典功能语言已更新');
         window.Dictionary.onLanguageUpdated(language);
     }
-    
+
     const fontFamily = getFontFamilyByLanguage(language);
 
     if (!fontFamily) {
@@ -325,6 +326,10 @@ async function initReader(file = null) {
                 const metadata = book.package.metadata;
                 const language = metadata.language;
 
+                // 保存元数据到全局变量
+                currentBookMetadata = metadata;
+                console.log('📚 书籍元数据已保存到全局变量:', currentBookMetadata);
+
                 debugLog('EPUB元数据:', metadata);
                 debugLog('检测到的语言:', language);
 
@@ -338,6 +343,19 @@ async function initReader(file = null) {
                 debugLog('获取语言信息失败，使用默认设置:', metadataError.message);
                 // 如果无法获取语言信息，不设置特定字体，使用系统默认
                 debugLog('使用系统默认字体渲染');
+
+                // 即使metadata获取失败，也尝试更新书本信息（使用默认值）
+                try {
+                    if (book && book.package && book.package.metadata) {
+                        showEpubMetadata();
+                    } else {
+                        // 如果完全没有metadata，显示默认信息
+                        updateBookInfo({ title: '未知标题' });
+                    }
+                } catch (updateError) {
+                    console.error('更新书本信息失败:', updateError);
+                    updateBookInfo({ title: '未知标题' });
+                }
             }
             debugLog('第一章显示成功');
 
@@ -427,6 +445,9 @@ async function initReader(file = null) {
             await Promise.race([readyPromise, timeoutPromise]);
             debugLog('书籍元数据加载完成');
 
+            // 显示详细的元数据信息并更新侧边栏
+            showEpubMetadata();
+
             // 重新创建渲染器（使用epub-fixed.js增强功能）
             rendition = createRenditionWithFixedSupport(book, 'viewer');
 
@@ -513,8 +534,13 @@ async function loadTOC() {
     }
 }
 
-// 调试函数：显示EPUB元数据信息
+// 显示EPUB元数据信息并更新侧边栏
 function showEpubMetadata() {
+    console.log('📚 showEpubMetadata 被调用');
+    console.log('📚 book 存在:', !!book);
+    console.log('📚 book.package 存在:', !!(book && book.package));
+    console.log('📚 book.package.metadata 存在:', !!(book && book.package && book.package.metadata));
+
     if (book && book.package && book.package.metadata) {
         const metadata = book.package.metadata;
         console.log('📚 EPUB元数据信息:');
@@ -524,6 +550,9 @@ function showEpubMetadata() {
         console.log('  出版商:', metadata.publisher);
         console.log('  标识符:', metadata.identifier);
         console.log('  完整元数据:', metadata);
+
+        // 更新侧边栏的书本信息
+        updateBookInfo(metadata);
 
         // 在页面上也显示语言信息
         const loading = document.getElementById('loading');
@@ -536,6 +565,64 @@ function showEpubMetadata() {
                 </p>
             `;
         }
+    }
+}
+
+// 从全局变量更新侧边栏书本信息
+function updateBookInfoFromGlobal() {
+    console.log('📚 updateBookInfoFromGlobal 被调用');
+    console.log('📚 currentBookMetadata:', currentBookMetadata);
+
+    if (currentBookMetadata) {
+        updateBookInfo(currentBookMetadata);
+    } else {
+        console.log('📚 没有全局元数据，使用默认信息');
+        updateBookInfo({ title: '未知标题' });
+    }
+}
+
+// 更新侧边栏书本信息
+function updateBookInfo(metadata) {
+    console.log('📚 updateBookInfo 被调用，metadata:', metadata);
+    try {
+        // 更新书本标题
+        const bookTitle = document.getElementById('bookTitle');
+        if (bookTitle) {
+            bookTitle.textContent = metadata.title || '未知标题';
+        }
+
+        // 更新作者信息
+        const bookAuthor = document.getElementById('bookAuthor');
+        if (bookAuthor) {
+            const author = metadata.creator || metadata.author;
+            if (author) {
+                bookAuthor.textContent = `作者: ${author}`;
+                bookAuthor.style.display = 'block';
+            } else {
+                bookAuthor.style.display = 'none';
+            }
+        }
+
+        // 更新副标题（如果有出版商信息）
+        const bookSubtitle = document.getElementById('bookSubtitle');
+        if (bookSubtitle) {
+            if (metadata.publisher) {
+                bookSubtitle.textContent = `出版商: ${metadata.publisher}`;
+                bookSubtitle.style.display = 'block';
+            } else if (metadata.language) {
+                bookSubtitle.textContent = `语言: ${metadata.language}`;
+                bookSubtitle.style.display = 'block';
+            } else {
+                bookSubtitle.style.display = 'none';
+            }
+        }
+
+        // 更新页面标题
+        document.title = metadata.title || 'EPUB阅读器';
+
+        console.log('✅ 侧边栏书本信息已更新');
+    } catch (error) {
+        console.error('❌ 更新书本信息失败:', error);
     }
 }
 
@@ -1006,30 +1093,7 @@ async function initializeApp() {
         console.warn('⚠️ 主题管理器未加载');
     }
 
-    // 监听文件导入
-    const importInput = document.getElementById('importEpub');
-    if (importInput) {
-        importInput.addEventListener('change', function (e) {
-            const file = e.target.files[0];
-            if (file) {
-                // 检查文件类型
-                if (!(file instanceof File)) {
-                    showError('请选择本地的 EPUB 文件（File 类型）');
-                    return;
-                }
-
-                // 检查文件扩展名
-                if (!file.name.toLowerCase().endsWith('.epub')) {
-                    showError('请选择 EPUB 格式的文件（.epub 扩展名）');
-                    return;
-                }
-
-                document.getElementById('loading').style.display = '';
-                document.getElementById('loading').innerHTML = '<p>正在加载电子书...</p>';
-                initReader(file);
-            }
-        });
-    }
+    // 文件导入功能已移除
 
     // 字体切换功能
     const fontSelect = document.getElementById('fontSelect');
@@ -1425,6 +1489,23 @@ async function loadBookFromAPI(bookId) {
         await rendition.display();
         console.log('📚 内容显示成功');
 
+        // 等待并处理元数据
+        try {
+            await book.ready;
+            if (book && book.package && book.package.metadata) {
+                currentBookMetadata = book.package.metadata;
+                console.log('📚 API加载：书籍元数据已保存到全局变量:', currentBookMetadata);
+
+                // 立即更新侧边栏
+                updateBookInfoFromGlobal();
+
+                // 显示详细元数据
+                showEpubMetadata();
+            }
+        } catch (metadataError) {
+            console.error('📚 API加载：获取元数据失败:', metadataError);
+        }
+
         // 设置全局变量
         window.rendition = rendition;
         console.log('📚 设置全局rendition变量');
@@ -1507,6 +1588,27 @@ async function loadBookFromAPI(bookId) {
 
 // 页面卸载时保存设置
 window.addEventListener('beforeunload', saveMarginSettings);
+
+// 提供获取当前书籍语言的全局接口
+function getCurrentBookLanguage() {
+    return currentBookLanguage;
+}
+
+// 提供获取当前书籍元数据的全局接口
+function getCurrentBookMetadata() {
+    return currentBookMetadata;
+}
+
+// 手动触发侧边栏更新的全局接口
+function refreshBookInfo() {
+    console.log('📚 手动刷新书本信息');
+    updateBookInfoFromGlobal();
+}
+
+// 将函数暴露到全局作用域，供外部调用
+window.getCurrentBookLanguage = getCurrentBookLanguage;
+window.getCurrentBookMetadata = getCurrentBookMetadata;
+window.refreshBookInfo = refreshBookInfo;
 
 
 
