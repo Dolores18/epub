@@ -570,7 +570,12 @@ async function showWordInfo(word) {
                 htmlContent = `
                     <div class="word-entry">
                         <h4>${word}</h4>
-                        ${result.reading ? `<div class="word-reading">发音: /${result.reading}/</div>` : ''}
+                        ${result.reading ? `
+                            <div class="word-reading">
+                                发音: /${result.reading}/
+                                ${result.audio ? `<button onclick="playAudio('${result.audio}')" style="background: none; border: none; cursor: pointer; margin-left: 6px; font-size: 16px;" title="播放发音">📣</button>` : ''}
+                            </div>
+                        ` : ''}
                         ${result.writings && result.writings !== word ? `<div class="word-writings">单词: ${result.writings}</div>` : ''}
                         <div class="word-meaning">${result.meaning}</div>
                         <span class="word-type">${result.type}</span>
@@ -915,7 +920,8 @@ async function fetchEnglishDictionary(apiUrl, word) {
                 oxford: data.oxford,
                 bnc: data.bnc,
                 frq: data.frq,
-                frequency: data.frequency || [] // 新增频率数据
+                frequency: data.frequency || [], // 新增频率数据
+                audio: data.audio || '' // 新增音频URL
             };
             
             console.log('📚 处理后的英语结果:', result);
@@ -1041,6 +1047,39 @@ function clearSearch() {
 
     selectedText = '';
     showNotification('搜索已清空');
+}
+
+// 播放音频
+function playAudio(audioUrl) {
+    console.log('🔊 播放音频:', audioUrl);
+    
+    if (!audioUrl) {
+        console.warn('⚠️ 音频URL为空，无法播放');
+        return;
+    }
+    
+    try {
+        // 创建音频对象
+        const audio = new Audio(audioUrl);
+        
+        // 设置音频属性
+        audio.preload = 'auto';
+        audio.volume = 0.8;
+        
+        // 播放音频
+        audio.play().then(() => {
+            console.log('✅ 音频播放成功');
+        }).catch(error => {
+            console.error('❌ 音频播放失败:', error);
+            // 如果播放失败，尝试在新窗口打开
+            window.open(audioUrl, '_blank');
+        });
+        
+    } catch (error) {
+        console.error('❌ 创建音频对象失败:', error);
+        // 备用方案：在新窗口打开音频链接
+        window.open(audioUrl, '_blank');
+    }
 }
 
 // 查询选中文本
@@ -1303,7 +1342,12 @@ function showDictionaryWithResult(word, result) {
         <div class="dictionary-content">
             <div class="word-entry">
                 <h4>${word}</h4>
-                ${result.reading ? `<div class="word-reading">发音: /${result.reading}/</div>` : ''}
+                ${result.reading ? `
+                    <div class="word-reading">
+                        发音: /${result.reading}/
+                        ${result.audio ? `<button onclick="playAudio('${result.audio}')" style="background: none; border: none; cursor: pointer; margin-left: 6px; font-size: 16px;" title="播放发音">📣</button>` : ''}
+                    </div>
+                ` : ''}
                 ${result.writings ? `<div class="word-writings">书写形式: ${result.writings}</div>` : ''}
                 <div class="word-meaning">${result.meaning}</div>
                 <span class="word-type">${result.type}</span>
@@ -1435,8 +1479,12 @@ window.Dictionary = {
     bindRendition: bindRenditionManually,
     forceRebind: forceRebind,
     onLanguageUpdated: onLanguageUpdated,
-    updateTexts: updateDictionaryTexts
+    updateTexts: updateDictionaryTexts,
+    playAudio: playAudio
 };
+
+// 也暴露为全局函数，供HTML直接调用
+window.playAudio = playAudio;
 
 // 自动初始化
 document.addEventListener('DOMContentLoaded', function () {
