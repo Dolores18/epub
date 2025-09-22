@@ -726,6 +726,10 @@ async function showWordInfo(word) {
             console.log('🔍 生成的HTML内容:', htmlContent);
             wordInfo.innerHTML = htmlContent;
             console.log('✅ 单词信息已渲染到面板');
+            
+            // 查询成功后自动高亮查询的文本
+            console.log('🎨 词典查询完成，开始自动高亮查询文本...');
+            await autoHighlightAfterLookup(word);
         } else {
             console.log('⚠️ 未找到查询结果，显示未找到信息');
             wordInfo.innerHTML = `
@@ -741,6 +745,10 @@ async function showWordInfo(word) {
                 </div>
             `;
             console.log('✅ 未找到信息已渲染到面板');
+            
+            // 即使未找到词典结果，也可以选择高亮查询的文本
+            console.log('🎨 即使未找到词典结果，仍尝试自动高亮查询文本...');
+            await autoHighlightAfterLookup(word);
         }
     } catch (error) {
         console.error('❌ 显示单词信息失败:', error);
@@ -1436,6 +1444,90 @@ function clearCurrentSelection() {
 
     } catch (error) {
         console.error('❌ 清除选择失败:', error);
+    }
+}
+
+// 词典查询完成后自动高亮
+async function autoHighlightAfterLookup(queriedWord) {
+    try {
+        console.log('🎨 开始自动高亮查询的单词:', queriedWord);
+        
+        // 检查是否有当前选择的文本
+        if (!currentText || !currentCfiRange) {
+            console.log('⚠️ 没有当前选择的文本，尝试查找与查询词匹配的文本...');
+            
+            // 如果没有选择，尝试在当前页面查找该单词并高亮
+            const found = await findAndHighlightWord(queriedWord);
+            if (!found) {
+                console.log('⚠️ 在当前页面未找到要高亮的文本:', queriedWord);
+                return;
+            }
+        } else {
+            console.log('✅ 使用当前选择的文本进行高亮:', currentText);
+        }
+        
+        // 准备高亮数据
+        const highlightData = {
+            note: `词典查询: ${queriedWord}`,
+            source: 'auto-dictionary-highlight',
+            timestamp: new Date().toISOString()
+        };
+        
+        // 执行高亮操作
+        console.log('🎨 执行自动高亮...');
+        const renderer = bookManagerInstance.book.rendition;
+        
+        // 添加高亮
+        renderer.annotations.highlight(
+            currentCfiRange,
+            {
+                note: highlightData.note,
+                timestamp: highlightData.timestamp,
+                source: highlightData.source
+            },
+            undefined,
+            "user-highlight", // CSS类名
+            { "background-color": "#ffeb3b", "color": "#333" } // 样式
+        );
+
+        console.log('✅ 自动高亮添加成功');
+        
+        // 保存到后端
+        console.log('💾 保存自动高亮到后端...');
+        saveHighlightToBackend(currentCfiRange, currentText || queriedWord, highlightData);
+        
+        console.log('🎨 自动高亮完成');
+        
+    } catch (error) {
+        console.error('❌ 自动高亮失败:', error);
+        // 不显示错误弹窗，只记录到控制台
+    }
+}
+
+// 在当前页面查找并高亮指定单词
+async function findAndHighlightWord(word) {
+    try {
+        console.log('🔍 在当前页面查找单词:', word);
+        
+        if (!bookManagerInstance || !bookManagerInstance.book || !bookManagerInstance.book.rendition) {
+            console.error('❌ 书籍实例不可用');
+            return false;
+        }
+        
+        const rendition = bookManagerInstance.book.rendition;
+        
+        // 尝试在当前章节查找文本
+        // 注意：这是一个简化实现，实际的文本查找可能需要更复杂的逻辑
+        console.log('🔍 尝试查找文本:', word);
+        
+        // 这里可以添加更复杂的文本查找逻辑
+        // 目前暂时返回false，表示需要用户手动选择文本
+        console.log('⚠️ 自动文本查找功能待实现，请手动选择要高亮的文本');
+        return false;
+        
+    } catch (error) {
+        console.error('❌ 查找单词失败:', error);
+        return false;
     }
 }
 

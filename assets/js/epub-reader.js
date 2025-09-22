@@ -784,29 +784,41 @@ function setupEventListeners() {
     rendition.on('rendered', (section) => {
         console.log('页面渲染完成:', section);
 
-        // 每次页面渲染完成后，重新应用书籍的字体设置（而不是强制语言字体）
+        // 统一处理字体应用和高亮恢复，避免多次渲染
         setTimeout(() => {
+            console.log('🎨 [渲染优化] 开始统一处理字体和高亮');
+            
+            // 第一步：应用字体设置
             if (currentBookFontSettings) {
                 console.log('🔤 [字体] 页面渲染完成，重新应用书籍字体设置');
                 applyBookFontSettings();
             } else {
                 console.log('🔤 [字体] 无书籍字体设置，使用默认');
             }
-        }, 100); // 延迟100ms确保DOM完全渲染
-        
-        // 恢复高亮标注
-        setTimeout(() => {
+            
+            // 第二步：恢复高亮标注（字体设置完成后立即执行）
             if (window.Dictionary && typeof window.Dictionary.loadHighlights === 'function') {
-                console.log('🎨 [高亮] 页面渲染完成，开始恢复高亮');
+                console.log('🎨 [高亮] 字体设置完成，开始恢复高亮');
                 window.Dictionary.loadHighlights();
             } else {
                 console.log('🎨 [高亮] 词典系统未准备就绪，跳过高亮恢复');
             }
-        }, 200); // 延迟200ms确保字体设置完成
+            
+            console.log('🎨 [渲染优化] 字体和高亮处理完成');
+        }, 150); // 统一延迟150ms，确保DOM完全渲染
     });
 
     rendition.on('layout', (layout) => {
-        console.log('布局变化:', layout);
+        console.log('🏗️ [布局] 布局变化触发:', layout);
+        console.log('🏗️ [布局] 布局详情:', {
+            width: layout.width,
+            height: layout.height,
+            spread: layout.spread,
+            orientation: layout.orientation,
+            flow: layout.flow,
+            name: layout.name
+        });
+        console.log('🏗️ [布局] 调用堆栈:', new Error().stack);
     });
 
     // text-orientation修复已在渲染前处理，不需要在这里调用

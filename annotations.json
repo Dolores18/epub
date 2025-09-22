@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastModified": "2025-09-22T22:11:29.191939+00:00",
+  "lastModified": "2025-09-22T22:17:38.814260+00:00",
   "annotations": {
     "test_book": [
       {
@@ -66,6 +66,20 @@
         "chapterTitle": null,
         "chapterIndex": null,
         "id": "annotation_1758579089191_8fd03f98",
+        "bookId": "book_7a920962_272f0d83"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/278,/1:26,/1:28)",
+        "text": "損傷",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T22:17:38.809Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758579458814_bd2f7b84",
         "bookId": "book_7a920962_272f0d83"
       }
     ]
