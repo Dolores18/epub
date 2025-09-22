@@ -1617,11 +1617,8 @@ function updateValueDisplay(slider, display, unit) {
 // 应用页边距样式
 function applyMarginStyle(property, value, unit) {
     if (rendition) {
-        const styles = {};
-        styles[property] = value + unit;
-
-        // 应用到epub.js的主题系统
-        rendition.themes.override(styles);
+        // 使用epub-fixed.js的正确API：override(name, value, priority)
+        rendition.themes.override(property, value + unit, true);
 
         console.log(`应用样式: ${property} = ${value}${unit}`);
     }
@@ -1650,13 +1647,12 @@ function resetMargins() {
 
     // 重新应用默认样式
     if (rendition) {
-        rendition.themes.override({
-            'padding-top': '20px',
-            'padding-bottom': '30px',
-            'padding-left': '30px',
-            'padding-right': '30px',
-            'line-height': '1.8'
-        });
+        rendition.themes.override('padding-top', '20px', true);
+        rendition.themes.override('padding-bottom', '30px', true);
+        rendition.themes.override('padding-left', '30px', true);
+        rendition.themes.override('padding-right', '30px', true);
+        rendition.themes.override('line-height', '1.8', true);
+        console.log('已重置并应用默认页边距');
     }
 }
 
@@ -1680,6 +1676,15 @@ function loadMarginSettings() {
         const saved = localStorage.getItem('epubReaderMargins');
         if (saved) {
             const settings = JSON.parse(saved);
+            
+            // 定义属性映射
+            const propertyMap = {
+                'topMargin': 'padding-top',
+                'bottomMargin': 'padding-bottom', 
+                'leftMargin': 'padding-left',
+                'rightMargin': 'padding-right',
+                'lineHeight': 'line-height'
+            };
 
             Object.keys(settings).forEach(id => {
                 const slider = document.getElementById(id);
@@ -1690,10 +1695,16 @@ function loadMarginSettings() {
                     if (valueDisplay) {
                         updateValueDisplay(slider, valueDisplay, unit);
                     }
+                    
+                    // 应用样式到 rendition
+                    const property = propertyMap[id];
+                    if (property) {
+                        applyMarginStyle(property, settings[id], unit);
+                    }
                 }
             });
 
-            console.log('页边距设置已加载');
+            console.log('页边距设置已加载并应用');
         }
     } catch (error) {
         console.error('加载页边距设置失败:', error);
