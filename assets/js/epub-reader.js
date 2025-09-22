@@ -714,7 +714,7 @@ function isDoubleColumnMode() {
 }
 
 // 切换单栏/双栏模式
-function toggleColumnMode() {
+async function toggleColumnMode() {
     if (!rendition) {
         console.warn('rendition 未初始化，无法切换栏数');
         return;
@@ -729,8 +729,9 @@ function toggleColumnMode() {
         
         console.log('新栏数模式:', currentSpread);
         
-        // 保存当前位置
-        const currentCfi = rendition.currentLocation?.start?.cfi;
+        // 保存当前位置 - 优先使用全局变量currentLocation
+        const currentCfi = currentLocation?.start?.cfi || rendition.currentLocation?.start?.cfi;
+        console.log('🔄 保存当前位置CFI:', currentCfi);
         
         // 销毁当前rendition
         rendition.destroy();
@@ -743,10 +744,11 @@ function toggleColumnMode() {
         
         // 重新显示内容
         if (currentCfi) {
-            console.log('恢复到位置:', currentCfi);
-            rendition.display(currentCfi);
+            console.log('🔄 恢复到位置:', currentCfi);
+            await rendition.display(currentCfi);
         } else {
-            rendition.display();
+            console.log('🔄 没有保存的位置，显示开头');
+            await rendition.display();
         }
         
         // 重新应用字体设置
@@ -777,7 +779,7 @@ function toggleColumnMode() {
 }
 
 // 设置栏数模式
-function setColumnMode(spread) {
+async function setColumnMode(spread) {
     if (spread === currentSpread) {
         console.log('栏数模式无变化，跳过');
         return;
@@ -791,8 +793,9 @@ function setColumnMode(spread) {
     try {
         console.log('设置栏数模式:', currentSpread, '->', spread);
         
-        // 保存当前位置
-        const currentCfi = rendition.currentLocation?.start?.cfi;
+        // 保存当前位置 - 优先使用全局变量currentLocation
+        const currentCfi = currentLocation?.start?.cfi || rendition.currentLocation?.start?.cfi;
+        console.log('🔄 保存当前位置CFI:', currentCfi);
         
         // 更新栏数设置
         currentSpread = spread;
@@ -808,10 +811,11 @@ function setColumnMode(spread) {
         
         // 重新显示内容
         if (currentCfi) {
-            console.log('恢复到位置:', currentCfi);
-            rendition.display(currentCfi);
+            console.log('🔄 恢复到位置:', currentCfi);
+            await rendition.display(currentCfi);
         } else {
-            rendition.display();
+            console.log('🔄 没有保存的位置，显示开头');
+            await rendition.display();
         }
         
         // 重新应用字体设置
@@ -1309,7 +1313,7 @@ async function initializeApp() {
             const selectedValue = columnSelect.value;
             const selectedSpread = selectedValue === "true" ? true : "none";
             console.log('📖 栏数切换:', selectedValue, '->', selectedSpread);
-            setColumnMode(selectedSpread);
+            setColumnMode(selectedSpread).catch(error => console.error('UI切换栏数失败:', error));
         });
     }
 
@@ -1468,7 +1472,7 @@ async function initializeApp() {
             case 'c':
             case 'C':
                 // C键切换单栏/双栏
-                toggleColumnMode();
+                toggleColumnMode().catch(error => console.error('键盘切换栏数失败:', error));
                 break;
         }
     });
@@ -1794,7 +1798,7 @@ function handleColumnChange() {
         const selectedValue = columnSelect.value;
         const selectedSpread = selectedValue === "true" ? true : "none";
         console.log('📖 HTML回调：栏数切换:', selectedValue, '->', selectedSpread);
-        setColumnMode(selectedSpread);
+        setColumnMode(selectedSpread).catch(error => console.error('HTML回调切换栏数失败:', error));
     }
 }
 
