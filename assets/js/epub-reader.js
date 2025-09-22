@@ -117,6 +117,9 @@ let pageHeight = 0;   // 页面高度
 // 书写模式配置
 let writingMode = "horizontal-tb";  // 默认横排模式，可设置为 "vertical-rl" 竖排模式和"horizontal-tb"横排模式
 
+// 栏数配置
+let currentSpread = "none";  // 默认单栏模式，可设置为 true 双栏模式
+
 // 使用epub-fixed.js的增强功能创建rendition
 function createRenditionWithFixedSupport(book, viewerId, options = {}) {
     console.log('📶 使用epub-fixed.js创建rendition...');
@@ -125,7 +128,7 @@ function createRenditionWithFixedSupport(book, viewerId, options = {}) {
     const defaultConfig = {
         width: '100%',
         height: '100%',
-        spread: 'none',
+        spread: currentSpread,  // 使用全局变量设置栏数
         allowScriptedContent: true,
         flow: 'paginated',
         manager: 'default',
@@ -705,6 +708,139 @@ function isVerticalMode() {
     return writingMode === "vertical-rl" || writingMode === "vertical-lr";
 }
 
+// 检测当前是否为双栏模式
+function isDoubleColumnMode() {
+    return currentSpread === true;
+}
+
+// 切换单栏/双栏模式
+function toggleColumnMode() {
+    if (!rendition) {
+        console.warn('rendition 未初始化，无法切换栏数');
+        return;
+    }
+
+    try {
+        console.log('切换前栏数模式:', currentSpread);
+        
+        // 切换栏数
+        const newSpread = currentSpread === "none" ? true : "none";
+        currentSpread = newSpread;
+        
+        console.log('新栏数模式:', currentSpread);
+        
+        // 保存当前位置
+        const currentCfi = rendition.currentLocation?.start?.cfi;
+        
+        // 销毁当前rendition
+        rendition.destroy();
+        
+        // 重新创建rendition with新的spread设置
+        rendition = createRenditionWithFixedSupport(book, 'viewer');
+        
+        // 重新设置为全局变量
+        window.rendition = rendition;
+        
+        // 重新显示内容
+        if (currentCfi) {
+            console.log('恢复到位置:', currentCfi);
+            rendition.display(currentCfi);
+        } else {
+            rendition.display();
+        }
+        
+        // 重新应用字体设置
+        applyInitialFontSize();
+        
+        // 重新应用语言字体
+        if (currentBookLanguage) {
+            applyLanguageBasedFont(currentBookLanguage);
+        }
+        
+        // 重新设置事件监听器
+        setupEventListeners();
+        
+        // 通知词典功能重新绑定
+        if (window.Dictionary && window.Dictionary.bindRendition) {
+            console.log('🔍 重新通知词典功能绑定rendition');
+            window.Dictionary.bindRendition();
+        }
+        
+        // 保存设置到本地存储
+        localStorage.setItem('epubReaderSpread', currentSpread);
+        
+        console.log('栏数切换完成:', currentSpread === "none" ? "单栏" : "双栏");
+        
+    } catch (error) {
+        console.error('栏数切换失败:', error);
+    }
+}
+
+// 设置栏数模式
+function setColumnMode(spread) {
+    if (spread === currentSpread) {
+        console.log('栏数模式无变化，跳过');
+        return;
+    }
+    
+    if (!rendition) {
+        console.warn('rendition 未初始化，无法设置栏数');
+        return;
+    }
+
+    try {
+        console.log('设置栏数模式:', currentSpread, '->', spread);
+        
+        // 保存当前位置
+        const currentCfi = rendition.currentLocation?.start?.cfi;
+        
+        // 更新栏数设置
+        currentSpread = spread;
+        
+        // 销毁当前rendition
+        rendition.destroy();
+        
+        // 重新创建rendition with新的spread设置
+        rendition = createRenditionWithFixedSupport(book, 'viewer');
+        
+        // 重新设置为全局变量
+        window.rendition = rendition;
+        
+        // 重新显示内容
+        if (currentCfi) {
+            console.log('恢复到位置:', currentCfi);
+            rendition.display(currentCfi);
+        } else {
+            rendition.display();
+        }
+        
+        // 重新应用字体设置
+        applyInitialFontSize();
+        
+        // 重新应用语言字体
+        if (currentBookLanguage) {
+            applyLanguageBasedFont(currentBookLanguage);
+        }
+        
+        // 重新设置事件监听器
+        setupEventListeners();
+        
+        // 通知词典功能重新绑定
+        if (window.Dictionary && window.Dictionary.bindRendition) {
+            console.log('🔍 重新通知词典功能绑定rendition');
+            window.Dictionary.bindRendition();
+        }
+        
+        // 保存设置到本地存储
+        localStorage.setItem('epubReaderSpread', currentSpread);
+        
+        console.log('栏数设置完成:', currentSpread === "none" ? "单栏" : "双栏");
+        
+    } catch (error) {
+        console.error('栏数设置失败:', error);
+    }
+}
+
 // 智能上一页
 function prevPage() {
     if (rendition) {
@@ -1015,6 +1151,26 @@ function initializeFontSize() {
     }
 }
 
+// 初始化栏数设置（从本地存储加载）
+function initializeSpreadSettings() {
+    try {
+        const savedSpread = localStorage.getItem('epubReaderSpread');
+        if (savedSpread) {
+            // 处理本地存储的值：将字符串转换为正确的类型
+            if (savedSpread === "true") {
+                currentSpread = true;
+            } else if (savedSpread === "false") {
+                currentSpread = false;
+            } else {
+                currentSpread = savedSpread; // "none"
+            }
+            console.log('从本地存储加载栏数设置:', savedSpread, '->', currentSpread);
+        }
+    } catch (error) {
+        console.error('加载栏数设置失败:', error);
+    }
+}
+
 // 应用初始字体大小
 function applyInitialFontSize() {
     if (rendition && currentFontSize !== 16) {
@@ -1076,6 +1232,9 @@ async function initializeApp() {
 
     // 初始化字体大小设置
     initializeFontSize();
+    
+    // 初始化栏数设置
+    initializeSpreadSettings();
 
     // 初始化词典功能
     if (window.Dictionary) {
@@ -1133,6 +1292,24 @@ async function initializeApp() {
                     console.warn('🔤 rendition未初始化，无法应用字体');
                 }
             }
+        });
+    }
+
+    // 栏数切换功能
+    const columnSelect = document.getElementById('columnSelect');
+    console.log('📖 栏数选择器元素:', columnSelect);
+    if (columnSelect) {
+        // 设置初始值：true -> "true", "none" -> "none"
+        const initialValue = currentSpread === true ? "true" : "none";
+        console.log('📖 设置栏数选择器初始值:', currentSpread, '->', initialValue);
+        columnSelect.value = initialValue;
+        
+        console.log('📖 绑定栏数切换事件监听器');
+        columnSelect.addEventListener('change', function () {
+            const selectedValue = columnSelect.value;
+            const selectedSpread = selectedValue === "true" ? true : "none";
+            console.log('📖 栏数切换:', selectedValue, '->', selectedSpread);
+            setColumnMode(selectedSpread);
         });
     }
 
@@ -1287,6 +1464,11 @@ async function initializeApp() {
                 if (window.quickThemeSwitch) {
                     window.quickThemeSwitch();
                 }
+                break;
+            case 'c':
+            case 'C':
+                // C键切换单栏/双栏
+                toggleColumnMode();
                 break;
         }
     });
@@ -1605,10 +1787,25 @@ function refreshBookInfo() {
     updateBookInfoFromGlobal();
 }
 
+// 处理栏数选择器变化的全局函数
+function handleColumnChange() {
+    const columnSelect = document.getElementById('columnSelect');
+    if (columnSelect) {
+        const selectedValue = columnSelect.value;
+        const selectedSpread = selectedValue === "true" ? true : "none";
+        console.log('📖 HTML回调：栏数切换:', selectedValue, '->', selectedSpread);
+        setColumnMode(selectedSpread);
+    }
+}
+
 // 将函数暴露到全局作用域，供外部调用
 window.getCurrentBookLanguage = getCurrentBookLanguage;
 window.getCurrentBookMetadata = getCurrentBookMetadata;
 window.refreshBookInfo = refreshBookInfo;
+window.toggleColumnMode = toggleColumnMode;
+window.setColumnMode = setColumnMode;
+window.isDoubleColumnMode = isDoubleColumnMode;
+window.handleColumnChange = handleColumnChange;
 
 
 
