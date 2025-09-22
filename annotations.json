@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastModified": "2025-09-22T22:17:38.814260+00:00",
+  "lastModified": "2025-09-22T23:07:23.156307+00:00",
   "annotations": {
     "test_book": [
       {
@@ -80,6 +80,118 @@
         "chapterTitle": null,
         "chapterIndex": null,
         "id": "annotation_1758579458814_bd2f7b84",
+        "bookId": "book_7a920962_272f0d83"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/372,/1:6,/1:8)",
+        "text": "撤回",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T23:00:19.929Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758582019935_4267bc82",
+        "bookId": "book_7a920962_272f0d83"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/366,/1:267,/1:269)",
+        "text": "解剖",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T23:03:45.920Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758582225924_f5709f79",
+        "bookId": "book_7a920962_272f0d83"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/396,/1:79,/1:80)",
+        "text": "弦",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T23:05:16.672Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758582316677_01490452",
+        "bookId": "book_7a920962_272f0d83"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/400,/1:29,/1:31)",
+        "text": "暖房",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T23:05:45.360Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758582345364_7b5da804",
+        "bookId": "book_7a920962_272f0d83"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/408,/2/2/1:0,/3:4)",
+        "text": "見み咎とがめられず",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T23:06:10.831Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758582370836_348e41f6",
+        "bookId": "book_7a920962_272f0d83"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/410,/1:10,/1:12)",
+        "text": "鍵穴",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T23:06:27.700Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758582387702_80de0973",
+        "bookId": "book_7a920962_272f0d83"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/410,/1:53,/1:55)",
+        "text": "施錠",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T23:06:51.864Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758582411869_fa28abeb",
+        "bookId": "book_7a920962_272f0d83"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/418,/1:8,/1:10)",
+        "text": "咄嗟",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T23:07:23.152Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758582443156_ccb73b3c",
         "bookId": "book_7a920962_272f0d83"
       }
     ]

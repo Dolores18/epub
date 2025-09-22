@@ -1976,7 +1976,7 @@ function showQueryButton(selection, contents) {
 
                 // 根据结果创建并显示面板
                 if (result) {
-                    showDictionaryWithResult(selectedText, result);
+                    await showDictionaryWithResult(selectedText, result);
                 } else {
                     showDictionaryWithError(selectedText, '未找到该单词的释义');
                 }
@@ -2075,11 +2075,17 @@ function hideLoadingIndicator() {
     }
 }
 
+// 全局变量存储当前查询的单词
+let currentQueriedWord = null;
+
 // 显示带结果的词典面板
-function showDictionaryWithResult(word, result) {
+async function showDictionaryWithResult(word, result) {
     console.log('🎯 ===== 显示带结果的词典面板 =====');
     console.log('🔍 单词:', word);
     console.log('🔍 结果:', result);
+    
+    // 保存当前查询的单词
+    currentQueriedWord = word;
 
     // 创建词典面板HTML
     const panelHTML = `
@@ -2199,7 +2205,7 @@ function showDictionaryModal(content) {
 }
 
 // 隐藏词典模态窗口
-function hideDictionaryModal() {
+async function hideDictionaryModal() {
     console.log('🔍 [hideDictionaryModal] 隐藏词典模态窗口');
     
     // 停止并清理音频资源
@@ -2209,6 +2215,24 @@ function hideDictionaryModal() {
     if (modal) {
         modal.remove();
         console.log('✅ 词典模态窗口已隐藏');
+        
+        // 关闭面板后自动高亮查询的文本
+        if (currentQueriedWord) {
+            console.log('🎨 词典面板关闭，开始自动高亮查询文本:', currentQueriedWord);
+            try {
+                // 直接调用高亮函数，使用已选择的文本和CFI范围
+                const success = highlightSelectedText();
+                if (success) {
+                    console.log('✅ 自动高亮成功');
+                } else {
+                    console.log('⚠️ 自动高亮失败');
+                }
+            } catch (error) {
+                console.error('❌ 自动高亮失败:', error);
+            }
+            // 清除当前查询的单词
+            currentQueriedWord = null;
+        }
     }
 }
 
