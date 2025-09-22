@@ -576,8 +576,6 @@ async function showWordInfo(word) {
                         <span class="word-type">${result.type}</span>
                         ${result.collins ? `<div class="word-source">柯林斯词典等级: ${result.collins}</div>` : ''}
                         ${result.oxford ? `<div class="word-source">牛津词典收录: ${result.oxford ? '是' : '否'}</div>` : ''}
-                        ${result.bnc ? `<div class="word-source">BNC频率: ${result.bnc}</div>` : ''}
-                        ${result.frq ? `<div class="word-source">使用频率: ${result.frq}</div>` : ''}
                         <div class="word-source">来源: ${result.source}</div>
                         ${result.examples && result.examples.length > 0 ? `
                             <div class="word-examples">
@@ -585,6 +583,22 @@ async function showWordInfo(word) {
                                 <ul>
                                     ${result.examples.map(example => `<li>${example}</li>`).join('')}
                                 </ul>
+                            </div>
+                        ` : ''}
+                        ${result.frequency && result.frequency.length > 0 ? `
+                            <div class="word-frequency">
+                                <div style="font-size: 11px; color: #666; margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
+                                    <strong>COCA Frequency 60,000 — 2020</strong>
+                                    ${result.frequency.map(freq => `
+                                        <div style="margin: 2px 0; display: flex; align-items: center; gap: 6px;">
+                                            <span style="background: #f0c14b; color: white; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">
+                                                ${freq.pos}
+                                            </span>
+                                            <span style="color: #f0c14b; font-weight: bold;">Rank: ${freq.rank}</span>
+                                            <span style="color: #666;">Freq: ${freq.frequency}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
                             </div>
                         ` : ''}
                     </div>
@@ -900,7 +914,8 @@ async function fetchEnglishDictionary(apiUrl, word) {
                 collins: data.collins,
                 oxford: data.oxford,
                 bnc: data.bnc,
-                frq: data.frq
+                frq: data.frq,
+                frequency: data.frequency || [] // 新增频率数据
             };
             
             console.log('📚 处理后的英语结果:', result);
@@ -1288,10 +1303,12 @@ function showDictionaryWithResult(word, result) {
         <div class="dictionary-content">
             <div class="word-entry">
                 <h4>${word}</h4>
-                ${result.reading ? `<div class="word-reading">${result.reading}</div>` : ''}
+                ${result.reading ? `<div class="word-reading">发音: /${result.reading}/</div>` : ''}
                 ${result.writings ? `<div class="word-writings">书写形式: ${result.writings}</div>` : ''}
                 <div class="word-meaning">${result.meaning}</div>
                 <span class="word-type">${result.type}</span>
+                ${result.collins ? `<div class="word-source">柯林斯词典等级: ${result.collins}</div>` : ''}
+                ${result.oxford ? `<div class="word-source">牛津词典收录: ${result.oxford ? '是' : '否'}</div>` : ''}
                 ${result.source ? `<div class="word-source">来源: ${result.source}</div>` : ''}
                 ${result.examples && result.examples.length > 0 ? `
                     <div class="word-examples">
@@ -1299,6 +1316,22 @@ function showDictionaryWithResult(word, result) {
                         <ul>
                             ${result.examples.map(example => `<li>${example}</li>`).join('')}
                         </ul>
+                    </div>
+                ` : ''}
+                ${result.frequency && result.frequency.length > 0 ? `
+                    <div class="word-frequency">
+                        <div style="font-size: 11px; color: #666; margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px;">
+                            <strong>COCA Frequency 60,000 — 2020</strong>
+                            ${result.frequency.map(freq => `
+                                <div style="margin: 2px 0; display: flex; align-items: center; gap: 6px;">
+                                    <span style="background: #f0c14b; color: white; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">
+                                        ${freq.pos}
+                                    </span>
+                                    <span style="color: #f0c14b; font-weight: bold;">Rank: ${freq.rank}</span>
+                                    <span style="color: #666;">Freq: ${freq.frequency}</span>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 ` : ''}
             </div>
