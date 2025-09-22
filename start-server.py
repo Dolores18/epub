@@ -191,7 +191,9 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     'description': book_info.get('description', ''),
                     'identifier': book_info.get('identifier', ''),
                     'hasCover': has_cover,
-                    'coverUrl': f'/api/cover/{book_id}' if has_cover else None
+                    'coverUrl': f'/api/cover/{book_id}' if has_cover else None,
+                    'fontFamily': book_info.get('fontFamily'),
+                    'fontMode': book_info.get('fontMode', 'auto')
                 })
             
             response = {
@@ -203,6 +205,37 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
             return
         
+        # 处理API路由 /api/book-font/<bookId> - 获取书籍字体设置
+        if path.startswith('/api/book-font/'):
+            book_id = path[15:]  # 移除 '/api/book-font/' 前缀 (15个字符)
+            print(f"🔤 [API] 获取字体设置请求: '{book_id}'")
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.end_headers()
+            
+            # 使用数据管理器获取字体设置
+            font_data = data_manager.get_book_font(book_id)
+            
+            if font_data:
+                response = {
+                    'success': True,
+                    'bookId': book_id,
+                    'fontFamily': font_data['fontFamily'],
+                    'fontMode': font_data['fontMode']
+                }
+                print(f"🔤 [API] 返回字体设置: {font_data}")
+            else:
+                response = {
+                    'success': False,
+                    'bookId': book_id,
+                    'message': 'Book not found or no font settings'
+                }
+                print(f"🔤 [API] 书籍不存在或无字体设置: '{book_id}'")
+            
+            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+            return
+
         # 处理API路由 /api/progress/<bookId> - 获取阅读进度
         if path.startswith('/api/progress/'):
             book_id = path[14:]  # 移除 '/api/progress/' 前缀 (14个字符)
@@ -577,6 +610,64 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             return
         
+        # 处理字体设置请求 /api/book-font
+        if path == '/api/book-font':
+            try:
+                # 读取JSON数据
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                
+                # 解析JSON
+                request_data = json.loads(post_data.decode('utf-8'))
+                book_id = request_data.get('bookId')
+                font_family = request_data.get('fontFamily')
+                font_mode = request_data.get('fontMode', 'auto')
+                
+                if not book_id:
+                    self.send_error(400, "Missing bookId")
+                    return
+                
+                # 检查书籍是否存在
+                book_info = data_manager.get_book(book_id)
+                if not book_info:
+                    self.send_error(404, f"Book not found: {book_id}")
+                    return
+                
+                print(f"🔤 [API] 设置书籍字体: {book_id}")
+                print(f"🔤 [API] 字体: {font_family}, 模式: {font_mode}")
+                
+                # 使用数据管理器设置字体
+                success = data_manager.set_book_font(book_id, font_family, font_mode)
+                
+                if success:
+                    # 保存更新后的数据
+                    data_manager.save_data()
+                    
+                    print(f"✅ [API] 字体设置成功: {book_id}")
+                    
+                    # 返回成功响应
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json; charset=utf-8')
+                    self.end_headers()
+                    
+                    response = {
+                        'success': True,
+                        'message': f'书籍 "{book_info.get("title", book_id)}" 字体设置成功',
+                        'bookId': book_id,
+                        'fontFamily': font_family,
+                        'fontMode': font_mode
+                    }
+                    
+                    self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                else:
+                    self.send_error(500, "Failed to set font")
+                    
+            except Exception as e:
+                print(f"❌ [API] 设置字体失败: {e}")
+                self.send_error(500, f"Set font failed: {str(e)}")
+            
+            return
+
         # 处理删除书籍请求 /api/delete-book
         if path == '/api/delete-book':
             try:

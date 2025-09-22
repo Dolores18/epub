@@ -41,6 +41,123 @@ let currentLocation;
 let isLocationsGenerating = false; // 防止重复生成locations的标志
 let currentBookLanguage = null; // 当前书籍语言
 let currentBookMetadata = null; // 当前书籍元数据
+let currentBookId = null; // 当前书籍ID
+let currentBookFontSettings = null; // 当前书籍字体设置
+
+// 书籍字体设置管理
+async function loadBookFontSettings(bookId) {
+    try {
+        console.log('🔤 [字体] 加载书籍字体设置:', bookId);
+        
+        const response = await fetch(`/api/book-font/${bookId}`);
+        if (!response.ok) {
+            throw new Error(`获取字体设置失败: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('🔤 [字体] 字体设置响应:', result);
+        
+        if (result.success) {
+            currentBookFontSettings = {
+                fontFamily: result.fontFamily,
+                fontMode: result.fontMode
+            };
+            console.log('🔤 [字体] 字体设置已加载:', currentBookFontSettings);
+            return currentBookFontSettings;
+        } else {
+            console.log('🔤 [字体] 无字体设置，使用默认值');
+            currentBookFontSettings = {
+                fontFamily: null,
+                fontMode: 'auto'
+            };
+            return currentBookFontSettings;
+        }
+    } catch (error) {
+        console.error('❌ [字体] 加载字体设置失败:', error);
+        currentBookFontSettings = {
+            fontFamily: null,
+            fontMode: 'auto'
+        };
+        return currentBookFontSettings;
+    }
+}
+
+async function saveBookFontSettings(bookId, fontFamily, fontMode) {
+    try {
+        console.log('🔤 [字体] 保存字体设置:', bookId, fontFamily, fontMode);
+        
+        const response = await fetch('/api/book-font', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                bookId: bookId,
+                fontFamily: fontFamily,
+                fontMode: fontMode
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`保存字体设置失败: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('🔤 [字体] 字体设置保存成功:', result);
+        
+        // 更新本地缓存
+        currentBookFontSettings = {
+            fontFamily: fontFamily,
+            fontMode: fontMode
+        };
+        
+        return true;
+    } catch (error) {
+        console.error('❌ [字体] 保存字体设置失败:', error);
+        return false;
+    }
+}
+
+function applyBookFontSettings() {
+    if (!currentBookFontSettings) {
+        console.log('🔤 [字体] 无字体设置，跳过应用');
+        return;
+    }
+    
+    console.log('🔤 [字体] 应用书籍字体设置:', currentBookFontSettings);
+    
+    const fontSelect = document.getElementById('fontSelect');
+    
+    if (currentBookFontSettings.fontMode === 'auto') {
+        // 自动模式
+        if (fontSelect) {
+            fontSelect.value = 'auto';
+        }
+        
+        // 根据语言应用字体
+        if (currentBookLanguage) {
+            applyLanguageBasedFont(currentBookLanguage);
+        }
+    } else if (currentBookFontSettings.fontMode === 'manual' && currentBookFontSettings.fontFamily) {
+        // 手动模式
+        if (fontSelect) {
+            fontSelect.value = currentBookFontSettings.fontFamily;
+        }
+        
+        // 应用选定的字体
+        const viewer = document.getElementById('viewer');
+        if (viewer) {
+            viewer.style.fontFamily = currentBookFontSettings.fontFamily;
+            console.log('🔤 [字体] 已设置viewer字体:', currentBookFontSettings.fontFamily);
+        }
+        
+        if (rendition) {
+            // 使用epub-fixed.js的正确API来设置字体
+            rendition.themes.font(currentBookFontSettings.fontFamily);
+            console.log('🔤 [字体] 已应用epub.js字体覆盖:', currentBookFontSettings.fontFamily);
+        }
+    }
+}
 
 // Locations本地存储管理
 async function getBookId(book) {
@@ -195,48 +312,19 @@ function applyLanguageBasedFont(language) {
     if (!fontFamily) {
         debugLog('不设置字体，使用系统默认渲染');
         // 清除之前可能设置的字体覆盖
-        rendition.themes.override({
-            'body': { 'font-family': '' },
-            '*': { 'font-family': '' }
-        });
+        if (rendition) {
+            rendition.themes.removeOverride('font-family');
+        }
         return;
     }
 
     debugLog('应用字体:', fontFamily);
 
-    // 设置默认主题
-    rendition.themes.default({
-        'body': {
-            'font-family': fontFamily + ' !important',
-            'line-height': '1.8',
-            'letter-spacing': '0.05em',
-            'font-size': '16px'
-        }
-    });
-
-    // 简化字体设置，不再处理竖排样式（已在渲染前处理）
-    const overrideStyles = {
-        'body': {
-            'font-family': fontFamily + ' !important'
-        },
-        '*': {
-            'font-family': fontFamily + ' !important'
-        },
-        '.calibre': {
-            'font-family': fontFamily + ' !important'
-        },
-        'p': {
-            'font-family': fontFamily + ' !important'
-        },
-        'div': {
-            'font-family': fontFamily + ' !important'
-        }
-    };
-
-    rendition.themes.override(overrideStyles);
-
-    // 调试：打印应用的样式
-    console.log('📖 应用的样式:', overrideStyles);
+    // 使用epub-fixed.js的正确API来设置字体
+    if (rendition) {
+        rendition.themes.font(fontFamily);
+        console.log('📖 已应用语言字体:', fontFamily);
+    }
 }
 
 // 强制禁用缓存 - 版本 2.0
@@ -331,7 +419,15 @@ async function initReader(file = null) {
 
                 // 保存元数据到全局变量
                 currentBookMetadata = metadata;
+                currentBookLanguage = language;
                 console.log('📚 书籍元数据已保存到全局变量:', currentBookMetadata);
+
+                // 设置当前书籍ID（用于默认书籍）
+                currentBookId = await getBookId(book);
+                console.log('📚 设置当前书籍ID:', currentBookId);
+
+                // 加载字体设置
+                await loadBookFontSettings(currentBookId);
 
                 debugLog('EPUB元数据:', metadata);
                 debugLog('检测到的语言:', language);
@@ -339,8 +435,8 @@ async function initReader(file = null) {
                 // 显示详细的元数据信息
                 showEpubMetadata();
 
-                // 根据语言设置字体
-                applyLanguageBasedFont(language);
+                // 应用字体设置
+                applyBookFontSettings();
 
             } catch (metadataError) {
                 debugLog('获取语言信息失败，使用默认设置:', metadataError.message);
@@ -685,13 +781,13 @@ function setupEventListeners() {
     rendition.on('rendered', (section) => {
         console.log('页面渲染完成:', section);
 
-        // 每次页面渲染完成后，重新应用基于语言的字体设置
+        // 每次页面渲染完成后，重新应用书籍的字体设置（而不是强制语言字体）
         setTimeout(() => {
-            if (book && book.package && book.package.metadata) {
-                const language = book.package.metadata.language;
-                applyLanguageBasedFont(language);
-
-                // 样式检查已移除，现在使用硬编码模式
+            if (currentBookFontSettings) {
+                console.log('🔤 [字体] 页面渲染完成，重新应用书籍字体设置');
+                applyBookFontSettings();
+            } else {
+                console.log('🔤 [字体] 无书籍字体设置，使用默认');
             }
         }, 100); // 延迟100ms确保DOM完全渲染
     });
@@ -1263,7 +1359,7 @@ async function initializeApp() {
     console.log('🔤 字体选择器元素:', fontSelect);
     if (fontSelect) {
         console.log('🔤 绑定字体切换事件监听器');
-        fontSelect.addEventListener('change', function () {
+        fontSelect.addEventListener('change', async function () {
             const selectedFont = fontSelect.value;
             console.log('🔤 字体切换:', selectedFont);
 
@@ -1277,6 +1373,11 @@ async function initializeApp() {
                 } else {
                     console.warn('🔤 无法获取书籍语言信息');
                 }
+                
+                // 保存自动模式设置到后端
+                if (currentBookId) {
+                    await saveBookFontSettings(currentBookId, null, 'auto');
+                }
             } else {
                 // 手动模式：使用用户选择的字体
                 console.log('🔤 手动模式：使用选择的字体');
@@ -1285,15 +1386,17 @@ async function initializeApp() {
                     viewer.style.fontFamily = selectedFont;
                     console.log('🔤 已设置viewer字体:', selectedFont);
                 }
-                // epub.js 内部内容也同步切换
+                // 使用epub-fixed.js的正确API来设置字体
                 if (rendition) {
-                    rendition.themes.override({
-                        'body': { 'font-family': selectedFont + ' !important' },
-                        '*': { 'font-family': selectedFont + ' !important' }
-                    });
-                    console.log('🔤 已应用epub.js字体覆盖');
+                    rendition.themes.font(selectedFont);
+                    console.log('🔤 已应用epub.js字体覆盖:', selectedFont);
                 } else {
                     console.warn('🔤 rendition未初始化，无法应用字体');
+                }
+                
+                // 保存手动模式设置到后端
+                if (currentBookId) {
+                    await saveBookFontSettings(currentBookId, selectedFont, 'manual');
                 }
             }
         });
@@ -1631,6 +1734,10 @@ async function loadBookFromAPI(bookId) {
     console.log('📚 从后端API获取书籍:', bookId);
 
     try {
+        // 设置当前书籍ID
+        currentBookId = bookId;
+        console.log('📚 设置当前书籍ID:', currentBookId);
+        
         // 构建API URL
         const apiUrl = `/api/book/${encodeURIComponent(bookId)}`;
         console.log('📚 请求URL:', apiUrl);
@@ -1680,8 +1787,13 @@ async function loadBookFromAPI(bookId) {
             await book.ready;
             if (book && book.package && book.package.metadata) {
                 currentBookMetadata = book.package.metadata;
+                currentBookLanguage = currentBookMetadata.language || 'auto';
                 console.log('📚 API加载：书籍元数据已保存到全局变量:', currentBookMetadata);
+                console.log('📚 API加载：当前书籍语言:', currentBookLanguage);
 
+                // 加载字体设置
+                await loadBookFontSettings(currentBookId);
+                
                 // 立即更新侧边栏
                 updateBookInfoFromGlobal();
 
@@ -1695,6 +1807,9 @@ async function loadBookFromAPI(bookId) {
         // 设置全局变量
         window.rendition = rendition;
         console.log('📚 设置全局rendition变量');
+        
+        // 应用字体设置
+        applyBookFontSettings();
 
         // 通知词典功能
         if (window.Dictionary && window.Dictionary.bindRendition) {

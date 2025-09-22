@@ -31,6 +31,15 @@ class DataManager:
                 self.book_files = data.get('book_files', {})
                 self.reading_progress = data.get('reading_progress', {})
                 
+                # 确保所有书籍都有字体设置字段
+                for book_id, book_info in self.books.items():
+                    if 'fontFamily' not in book_info:
+                        book_info['fontFamily'] = None
+                        print(f"🔤 [DataManager] 为书籍 {book_id} 添加默认fontFamily字段")
+                    if 'fontMode' not in book_info:
+                        book_info['fontMode'] = 'auto'
+                        print(f"🔤 [DataManager] 为书籍 {book_id} 添加默认fontMode字段")
+                
                 print(f"📚 [DataManager] 从 {self.data_file} 加载了 {len(self.books)} 本书籍")
                 print(f"📖 [DataManager] 加载了 {len(self.reading_progress)} 个阅读进度记录")
                 
@@ -82,6 +91,12 @@ class DataManager:
     # 书籍管理方法
     def add_book(self, book_id: str, book_info: Dict[str, Any], file_path: str) -> None:
         """添加书籍"""
+        # 确保书籍信息包含字体设置字段（如果没有则设置默认值）
+        if 'fontFamily' not in book_info:
+            book_info['fontFamily'] = None  # None表示使用自动检测
+        if 'fontMode' not in book_info:
+            book_info['fontMode'] = 'auto'  # 默认自动模式
+            
         self.books[book_id] = book_info
         self.book_files[book_id] = file_path
         print(f"📚 [DataManager] 添加书籍: {book_id}")
@@ -152,6 +167,31 @@ class DataManager:
     def get_all_books(self) -> Dict[str, Any]:
         """获取所有书籍"""
         return self.books.copy()
+    
+    # 字体设置管理方法
+    def set_book_font(self, book_id: str, font_family: str = None, font_mode: str = 'auto') -> bool:
+        """设置书籍字体"""
+        if book_id not in self.books:
+            print(f"❌ [DataManager] 书籍不存在: {book_id}")
+            return False
+            
+        self.books[book_id]['fontFamily'] = font_family
+        self.books[book_id]['fontMode'] = font_mode
+        
+        print(f"🔤 [DataManager] 更新书籍字体设置: {book_id}")
+        print(f"🔤 [DataManager] 字体: {font_family}, 模式: {font_mode}")
+        return True
+    
+    def get_book_font(self, book_id: str) -> Optional[Dict[str, str]]:
+        """获取书籍字体设置"""
+        if book_id not in self.books:
+            return None
+            
+        book_info = self.books[book_id]
+        return {
+            'fontFamily': book_info.get('fontFamily'),
+            'fontMode': book_info.get('fontMode', 'auto')
+        }
     
     # 阅读进度管理方法
     def get_progress(self, book_id: str) -> Optional[Dict[str, Any]]:
