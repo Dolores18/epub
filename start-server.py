@@ -115,6 +115,9 @@ def load_books_data():
         BOOK_FILES = {}
 
 class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def version_string(self):
+        """Return server version string."""
+        return f"HTTP/1.1 Server"
     def do_GET(self):
         # 解析URL路径
         parsed_path = urlparse(self.path)
@@ -574,7 +577,146 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             return
         
+        # 处理删除书籍请求 /api/delete-book
+        if path == '/api/delete-book':
+            try:
+                # 读取JSON数据
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                
+                # 解析JSON
+                request_data = json.loads(post_data.decode('utf-8'))
+                book_id = request_data.get('bookId')
+                
+                if not book_id:
+                    self.send_error(400, "Missing bookId")
+                    return
+                
+                # 检查书籍是否存在
+                book_info = data_manager.get_book(book_id)
+                if not book_info:
+                    self.send_error(404, f"Book not found: {book_id}")
+                    return
+                
+                print(f"🗑️ [API] 删除书籍请求: {book_id} - {book_info.get('title', 'Unknown')}")
+                
+                # 使用数据管理器删除书籍（包括实际文件）
+                success = data_manager.remove_book(book_id)
+                
+                if success:
+                    # 保存更新后的数据
+                    data_manager.save_data()
+                    
+                    print(f"✅ [API] 书籍删除成功: {book_id}")
+                    
+                    # 返回成功响应
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json; charset=utf-8')
+                    self.end_headers()
+                    
+                    response = {
+                        'success': True,
+                        'message': f'书籍 "{book_info.get("title", book_id)}" 删除成功',
+                        'bookId': book_id
+                    }
+                    
+                    self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                else:
+                    self.send_error(500, "Failed to delete book")
+                    
+            except Exception as e:
+                print(f"❌ [API] 删除书籍失败: {e}")
+                self.send_error(500, f"Delete failed: {str(e)}")
+            
+            return
+        
         # 其他POST请求
+        self.send_error(404, "Not Found")
+    
+    def do_DELETE(self):
+        """处理DELETE请求 - 删除书籍"""
+        # 解析URL路径
+        parsed_path = urlparse(self.path)
+        path = parsed_path.path
+        
+        print(f"📍 DELETE请求路径: {path}")
+        
+        # 处理API路由 /api/book/<bookId> - 删除特定书籍
+        if path.startswith('/api/book/'):
+            book_id = path[10:]  # 移除 '/api/book/' 前缀
+            
+            if not book_id:
+                self.send_error(400, "Missing book ID")
+                return
+            
+            try:
+                # 检查书籍是否存在
+                book_info = data_manager.get_book(book_id)
+                if not book_info:
+                    self.send_error(404, f"Book not found: {book_id}")
+                    return
+                
+                print(f"🗑️ [API] 删除书籍请求: {book_id} - {book_info.get('title', 'Unknown')}")
+                
+                # 使用数据管理器删除书籍（包括实际文件）
+                success = data_manager.remove_book(book_id)
+                
+                if success:
+                    # 保存更新后的数据
+                    data_manager.save_data()
+                    
+                    print(f"✅ [API] 书籍删除成功: {book_id}")
+                    
+                    # 返回成功响应
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json; charset=utf-8')
+                    self.end_headers()
+                    
+                    response = {
+                        'success': True,
+                        'message': f'书籍 "{book_info.get("title", book_id)}" 删除成功',
+                        'bookId': book_id
+                    }
+                    
+                    self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                else:
+                    self.send_error(500, "Failed to delete book")
+                    
+            except Exception as e:
+                print(f"❌ [API] 删除书籍失败: {e}")
+                self.send_error(500, f"Delete failed: {str(e)}")
+            
+            return
+        
+        # 处理API路由 /api/books/cleanup - 清理无效书籍
+        if path == '/api/books/cleanup':
+            try:
+                print("🧹 [API] 清理无效书籍请求")
+                
+                # 验证并清理无效书籍
+                data_manager.validate_book_files()
+                data_manager.save_data()
+                
+                # 返回成功响应
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.end_headers()
+                
+                response = {
+                    'success': True,
+                    'message': '无效书籍清理完成',
+                    'remainingBooks': len(data_manager.get_all_books())
+                }
+                
+                self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                
+            except Exception as e:
+                print(f"❌ [API] 清理失败: {e}")
+                self.send_error(500, f"Cleanup failed: {str(e)}")
+            
+            return
+        
+        # 其他DELETE请求
         self.send_error(404, "Not Found")
     
     def parse_multipart(self, data, boundary):
@@ -644,9 +786,15 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         # 添加 CORS 头部，允许跨域访问
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         super().end_headers()
+    
+    def do_OPTIONS(self):
+        """处理OPTIONS请求 - 用于CORS预检"""
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
 
 def find_free_port(start_port=8080):
     """查找可用端口"""

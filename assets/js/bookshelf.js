@@ -372,6 +372,14 @@ function createImportedBookCard(book) {
             <p class="book-author">${escapeHtml(author)}</p>
             <p class="book-language">${language}</p>
         </div>
+        <div class="book-card-menu" onclick="toggleBookMenu(event, '${book.id}')">
+            <div class="book-card-menu-icon">⋮</div>
+            <div class="book-card-dropdown" id="menu-${book.id}">
+                <button class="book-card-dropdown-item delete" onclick="deleteBook(event, '${book.id}', '${escapeHtml(title)}')">
+                    🗑️ 删除书籍
+                </button>
+            </div>
+        </div>
     `;
 
     return bookCard;
@@ -806,8 +814,134 @@ async function extractMissingCovers() {
 
 
 
+// 汉堡菜单控制函数
+function toggleBookMenu(event, bookId) {
+    event.stopPropagation(); // 防止触发书籍卡片的点击事件
+    
+    const menu = document.getElementById(`menu-${bookId}`);
+    const allMenus = document.querySelectorAll('.book-card-dropdown');
+    
+    // 关闭所有其他菜单
+    allMenus.forEach(m => {
+        if (m !== menu) {
+            m.classList.remove('show');
+        }
+    });
+    
+    // 切换当前菜单
+    menu.classList.toggle('show');
+}
+
+// 删除书籍函数
+async function deleteBook(event, bookId, bookTitle) {
+    event.stopPropagation(); // 防止事件冒泡
+    
+    // 确认对话框
+    if (!confirm(`确定要删除《${bookTitle}》吗？\n\n此操作将永久删除书籍文件和相关数据，无法恢复。`)) {
+        return;
+    }
+    
+    try {
+        console.log(`🗑️ 开始删除书籍: ${bookId} - ${bookTitle}`);
+        
+        // 显示加载状态
+        showLoading('正在删除书籍...');
+        
+        // 调用后端API删除书籍（使用POST方法）
+        const response = await fetch('/api/delete-book', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                bookId: bookId
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`删除失败: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('🗑️ 删除响应:', result);
+        
+        if (result.success) {
+            // 从本地数据中移除
+            importedBooks = importedBooks.filter(book => book.id !== bookId);
+            
+            // 从最近阅读中移除
+            recentBooks = recentBooks.filter(book => book.id !== bookId);
+            
+            // 保存更新后的数据
+            saveBooksToStorage();
+            
+            // 重新渲染书籍列表
+            renderBooks();
+            renderRecentBooks();
+            
+            // 显示成功消息
+            showSuccessMessage(`《${bookTitle}》删除成功`);
+            
+            console.log(`✅ 书籍删除成功: ${bookTitle}`);
+        } else {
+            throw new Error(result.message || '删除失败');
+        }
+        
+    } catch (error) {
+        console.error('❌ 删除书籍失败:', error);
+        alert(`删除书籍失败：${error.message}`);
+    } finally {
+        hideLoading();
+    }
+}
+
+// 显示成功消息
+function showSuccessMessage(message) {
+    // 创建成功提示元素
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-message';
+    successDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4CAF50;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        animation: slideInRight 0.3s ease;
+    `;
+    successDiv.textContent = message;
+    
+    // 添加到页面
+    document.body.appendChild(successDiv);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+        successDiv.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => {
+            if (successDiv.parentNode) {
+                successDiv.parentNode.removeChild(successDiv);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// 点击其他地方关闭菜单
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.book-card-menu')) {
+        const allMenus = document.querySelectorAll('.book-card-dropdown');
+        allMenus.forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+});
+
 // 导出函数供其他页面使用
 window.Bookshelf = {
     addToRecentBooks,
-    getBookDisplayName
+    getBookDisplayName,
+    toggleBookMenu,
+    deleteBook
 };

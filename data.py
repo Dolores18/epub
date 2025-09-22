@@ -87,8 +87,46 @@ class DataManager:
         print(f"📚 [DataManager] 添加书籍: {book_id}")
     
     def remove_book(self, book_id: str) -> bool:
-        """移除书籍"""
+        """移除书籍（包括实际文件）"""
         removed = False
+        
+        # 获取要删除的文件路径
+        book_info = self.books.get(book_id)
+        book_file_path = self.book_files.get(book_id)
+        
+        # 删除EPUB文件
+        if book_file_path and os.path.exists(book_file_path):
+            try:
+                os.remove(book_file_path)
+                print(f"🗑️ [DataManager] 删除书籍文件: {book_file_path}")
+                removed = True
+            except Exception as e:
+                print(f"❌ [DataManager] 删除书籍文件失败: {e}")
+        
+        # 删除封面文件
+        if book_info and book_info.get('coverPath'):
+            cover_path = book_info['coverPath']
+            if os.path.exists(cover_path):
+                try:
+                    os.remove(cover_path)
+                    print(f"🗑️ [DataManager] 删除封面文件: {cover_path}")
+                except Exception as e:
+                    print(f"❌ [DataManager] 删除封面文件失败: {e}")
+        
+        # 删除可能的解压目录
+        if book_file_path:
+            # 检查是否存在对应的解压目录 (book_xxx_extracted)
+            base_name = os.path.splitext(os.path.basename(book_file_path))[0]
+            extracted_dir = os.path.join(os.path.dirname(book_file_path), f"{base_name}_extracted")
+            if os.path.exists(extracted_dir) and os.path.isdir(extracted_dir):
+                try:
+                    import shutil
+                    shutil.rmtree(extracted_dir)
+                    print(f"🗑️ [DataManager] 删除解压目录: {extracted_dir}")
+                except Exception as e:
+                    print(f"❌ [DataManager] 删除解压目录失败: {e}")
+        
+        # 删除JSON记录
         if book_id in self.books:
             del self.books[book_id]
             removed = True
@@ -100,7 +138,7 @@ class DataManager:
             removed = True
         
         if removed:
-            print(f"📚 [DataManager] 移除书籍: {book_id}")
+            print(f"📚 [DataManager] 完全移除书籍: {book_id}")
         return removed
     
     def get_book(self, book_id: str) -> Optional[Dict[str, Any]]:
