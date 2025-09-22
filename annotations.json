@@ -1,0 +1,73 @@
+{
+  "version": "1.0",
+  "lastModified": "2025-09-22T22:11:29.191939+00:00",
+  "annotations": {
+    "test_book": [
+      {
+        "type": "highlight",
+        "cfiRange": "test",
+        "text": "test",
+        "id": "annotation_1758578297596_69d2b116",
+        "bookId": "test_book",
+        "timestamp": "2025-09-22T21:58:17.596090+00:00"
+      }
+    ],
+    "book_5c4a5f17_34c003f0": [
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/4[chapter01]!/4/2/8,/1:25,/1:45)",
+        "text": "测试高亮文本",
+        "color": "yellow",
+        "timestamp": "2025-01-20T10:30:00.000Z",
+        "note": "这是一个测试高亮",
+        "source": "dictionary-highlight",
+        "id": "annotation_1758578368850_bcd3457d",
+        "bookId": "book_5c4a5f17_34c003f0"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/12!/4/2/12,/1:49,/1:53)",
+        "text": "チョーク",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T22:05:36.193Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758578736197_23ec079b",
+        "bookId": "book_5c4a5f17_34c003f0"
+      },
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/12!/4/2/16,/3:4,/3:12)",
+        "text": "手を挙げていった",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T22:06:16.929Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758578776936_83794e30",
+        "bookId": "book_5c4a5f17_34c003f0"
+      }
+    ],
+    "book_7a920962_272f0d83": [
+      {
+        "type": "highlight",
+        "cfiRange": "epubcfi(/6/28!/4/2/272,/3:15,/3:18)",
+        "text": "マット",
+        "color": "yellow",
+        "className": "user-highlight",
+        "timestamp": "2025-09-22T22:11:29.186Z",
+        "note": "用户高亮",
+        "source": "dictionary-highlight",
+        "chapterTitle": null,
+        "chapterIndex": null,
+        "id": "annotation_1758579089191_8fd03f98",
+        "bookId": "book_7a920962_272f0d83"
+      }
+    ]
+  }
+}

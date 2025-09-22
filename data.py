@@ -7,7 +7,15 @@
 import json
 import os
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+
+# 导入注释管理器
+try:
+    from annotations_manager import get_annotation_manager
+    ANNOTATIONS_AVAILABLE = True
+except ImportError:
+    print("⚠️ [DataManager] 注释管理器不可用")
+    ANNOTATIONS_AVAILABLE = False
 
 
 class DataManager:
@@ -102,7 +110,7 @@ class DataManager:
         print(f"📚 [DataManager] 添加书籍: {book_id}")
     
     def remove_book(self, book_id: str) -> bool:
-        """移除书籍（包括实际文件）"""
+        """移除书籍（包括实际文件和注释数据）"""
         removed = False
         
         # 获取要删除的文件路径
@@ -140,6 +148,17 @@ class DataManager:
                     print(f"🗑️ [DataManager] 删除解压目录: {extracted_dir}")
                 except Exception as e:
                     print(f"❌ [DataManager] 删除解压目录失败: {e}")
+        
+        # 删除注释数据
+        if ANNOTATIONS_AVAILABLE:
+            try:
+                annotation_manager = get_annotation_manager()
+                annotation_removed = annotation_manager.remove_book_data(book_id)
+                if annotation_removed:
+                    annotation_manager.save_data()
+                    print(f"📝 [DataManager] 删除书籍注释数据: {book_id}")
+            except Exception as e:
+                print(f"❌ [DataManager] 删除注释数据失败: {e}")
         
         # 删除JSON记录
         if book_id in self.books:
@@ -249,19 +268,138 @@ class DataManager:
         if invalid_books:
             print(f"📚 [DataManager] 清理了 {len(invalid_books)} 个无效书籍")
     
+    # 注释管理方法（代理到注释管理器）
+    def add_annotation(self, book_id: str, annotation_data: Dict[str, Any]) -> Optional[str]:
+        """添加注释"""
+        if not ANNOTATIONS_AVAILABLE:
+            print("⚠️ [DataManager] 注释管理器不可用")
+            return None
+        
+        try:
+            annotation_manager = get_annotation_manager()
+            annotation_id = annotation_manager.add_annotation(book_id, annotation_data)
+            annotation_manager.save_data()
+            return annotation_id
+        except Exception as e:
+            print(f"❌ [DataManager] 添加注释失败: {e}")
+            return None
+    
+    def get_book_annotations(self, book_id: str, annotation_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """获取书籍注释"""
+        if not ANNOTATIONS_AVAILABLE:
+            return []
+        
+        try:
+            annotation_manager = get_annotation_manager()
+            return annotation_manager.get_book_annotations(book_id, annotation_type)
+        except Exception as e:
+            print(f"❌ [DataManager] 获取注释失败: {e}")
+            return []
+    
+    def remove_annotation(self, book_id: str, annotation_id: str) -> bool:
+        """删除注释"""
+        if not ANNOTATIONS_AVAILABLE:
+            return False
+        
+        try:
+            annotation_manager = get_annotation_manager()
+            result = annotation_manager.remove_annotation(book_id, annotation_id)
+            if result:
+                annotation_manager.save_data()
+            return result
+        except Exception as e:
+            print(f"❌ [DataManager] 删除注释失败: {e}")
+            return False
+    
+    def update_annotation(self, book_id: str, annotation_id: str, updates: Dict[str, Any]) -> bool:
+        """更新注释"""
+        if not ANNOTATIONS_AVAILABLE:
+            return False
+        
+        try:
+            annotation_manager = get_annotation_manager()
+            result = annotation_manager.update_annotation(book_id, annotation_id, updates)
+            if result:
+                annotation_manager.save_data()
+            return result
+        except Exception as e:
+            print(f"❌ [DataManager] 更新注释失败: {e}")
+            return False
+    
+    def clear_book_annotations(self, book_id: str, annotation_type: Optional[str] = None) -> int:
+        """清除书籍注释"""
+        if not ANNOTATIONS_AVAILABLE:
+            return 0
+        
+        try:
+            annotation_manager = get_annotation_manager()
+            count = annotation_manager.clear_book_annotations(book_id, annotation_type)
+            if count > 0:
+                annotation_manager.save_data()
+            return count
+        except Exception as e:
+            print(f"❌ [DataManager] 清除注释失败: {e}")
+            return 0
+    
+    def export_book_annotations(self, book_id: str) -> Optional[Dict[str, Any]]:
+        """导出书籍注释"""
+        if not ANNOTATIONS_AVAILABLE:
+            return None
+        
+        try:
+            annotation_manager = get_annotation_manager()
+            return annotation_manager.export_book_annotations(book_id)
+        except Exception as e:
+            print(f"❌ [DataManager] 导出注释失败: {e}")
+            return None
+    
+    def import_book_annotations(self, book_id: str, import_data: Dict[str, Any], merge: bool = True) -> bool:
+        """导入书籍注释"""
+        if not ANNOTATIONS_AVAILABLE:
+            return False
+        
+        try:
+            annotation_manager = get_annotation_manager()
+            result = annotation_manager.import_book_annotations(book_id, import_data, merge)
+            if result:
+                annotation_manager.save_data()
+            return result
+        except Exception as e:
+            print(f"❌ [DataManager] 导入注释失败: {e}")
+            return False
+    
     # 统计方法
     def get_stats(self) -> Dict[str, int]:
         """获取数据统计"""
-        return {
+        stats = {
             'books_count': len(self.books),
             'progress_count': len(self.reading_progress),
             'files_count': len(self.book_files)
         }
+        
+        # 添加注释统计
+        if ANNOTATIONS_AVAILABLE:
+            try:
+                annotation_manager = get_annotation_manager()
+                annotation_stats = annotation_manager.get_stats()
+                stats.update({
+                    'annotations_count': annotation_stats.get('totalAnnotations', 0),
+                    'annotated_books_count': annotation_stats.get('booksWithAnnotations', 0)
+                })
+            except Exception as e:
+                print(f"❌ [DataManager] 获取注释统计失败: {e}")
+        
+        return stats
     
     def __str__(self) -> str:
         """字符串表示"""
         stats = self.get_stats()
-        return f"DataManager(books={stats['books_count']}, progress={stats['progress_count']}, files={stats['files_count']})"
+        base_str = f"DataManager(books={stats['books_count']}, progress={stats['progress_count']}, files={stats['files_count']}"
+        
+        if ANNOTATIONS_AVAILABLE and 'annotations_count' in stats:
+            base_str += f", annotations={stats['annotations_count']}"
+        
+        return base_str + ")"
 
 
 # 全局数据管理器实例
@@ -297,3 +435,39 @@ def get_book_files() -> Dict[str, str]:
 def get_reading_progress() -> Dict[str, Any]:
     """获取阅读进度"""
     return data_manager.reading_progress
+
+
+# 注释相关便捷函数
+def add_book_annotation(book_id: str, annotation_data: Dict[str, Any]) -> Optional[str]:
+    """添加书籍注释"""
+    return data_manager.add_annotation(book_id, annotation_data)
+
+
+def get_book_annotations_data(book_id: str, annotation_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    """获取书籍注释数据"""
+    return data_manager.get_book_annotations(book_id, annotation_type)
+
+
+def remove_book_annotation(book_id: str, annotation_id: str) -> bool:
+    """删除书籍注释"""
+    return data_manager.remove_annotation(book_id, annotation_id)
+
+
+def update_book_annotation(book_id: str, annotation_id: str, updates: Dict[str, Any]) -> bool:
+    """更新书籍注释"""
+    return data_manager.update_annotation(book_id, annotation_id, updates)
+
+
+def clear_book_annotations_data(book_id: str, annotation_type: Optional[str] = None) -> int:
+    """清除书籍注释数据"""
+    return data_manager.clear_book_annotations(book_id, annotation_type)
+
+
+def export_book_annotations_data(book_id: str) -> Optional[Dict[str, Any]]:
+    """导出书籍注释数据"""
+    return data_manager.export_book_annotations(book_id)
+
+
+def import_book_annotations_data(book_id: str, import_data: Dict[str, Any], merge: bool = True) -> bool:
+    """导入书籍注释数据"""
+    return data_manager.import_book_annotations(book_id, import_data, merge)

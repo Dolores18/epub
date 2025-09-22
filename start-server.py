@@ -258,6 +258,34 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
             return
         
+        # 处理API路由 /api/annotations/<bookId> - 获取书籍注释
+        if path.startswith('/api/annotations/'):
+            book_id = path[17:]  # 移除 '/api/annotations/' 前缀 (17个字符)
+            
+            # 解析查询参数
+            query_params = parse_qs(parsed_path.query)
+            annotation_type = query_params.get('type', [None])[0]
+            
+            print(f"📝 [API] 获取注释请求: '{book_id}', type: {annotation_type}")
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.end_headers()
+            
+            # 使用数据管理器获取注释数据
+            annotations = data_manager.get_book_annotations(book_id, annotation_type)
+            
+            response = {
+                'success': True,
+                'bookId': book_id,
+                'annotations': annotations,
+                'count': len(annotations)
+            }
+            
+            print(f"📝 [API] 返回注释数据: {len(annotations)} 个注释")
+            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+            return
+        
         # 处理API路由 /api/book/<bookId> - 获取特定书籍的文件
         if path.startswith('/api/book/'):
             book_id = path[10:]  # 移除 '/api/book/' 前缀
@@ -667,7 +695,201 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(500, f"Set font failed: {str(e)}")
             
             return
-
+        
+        # 处理注释保存请求 /api/annotations
+        if path == '/api/annotations':
+            try:
+                # 读取JSON数据
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                
+                # 解析JSON
+                request_data = json.loads(post_data.decode('utf-8'))
+                book_id = request_data.get('bookId')
+                annotation_data = request_data.get('annotation')
+                
+                if not book_id or not annotation_data:
+                    self.send_error(400, "Missing bookId or annotation data")
+                    return
+                
+                # 检查书籍是否存在
+                book_info = data_manager.get_book(book_id)
+                if not book_info:
+                    self.send_error(404, f"Book not found: {book_id}")
+                    return
+                
+                print(f"📝 [API] 保存注释请求: {book_id}")
+                print(f"📝 [API] 注释类型: {annotation_data.get('type', 'unknown')}")
+                print(f"📝 [API] CFI范围: {annotation_data.get('cfiRange', 'N/A')}")
+                
+                # 使用数据管理器添加注释
+                annotation_id = data_manager.add_annotation(book_id, annotation_data)
+                
+                if annotation_id:
+                    print(f"✅ [API] 注释保存成功: {annotation_id}")
+                    
+                    # 返回成功响应
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json; charset=utf-8')
+                    self.end_headers()
+                    
+                    response = {
+                        'success': True,
+                        'message': '注释保存成功',
+                        'bookId': book_id,
+                        'annotationId': annotation_id,
+                        'annotationType': annotation_data.get('type'),
+                        'timestamp': annotation_data.get('timestamp')
+                    }
+                    
+                    self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                else:
+                    self.send_error(500, "Failed to save annotation")
+                    
+            except Exception as e:
+                print(f"❌ [API] 保存注释失败: {e}")
+                self.send_error(500, f"Save annotation failed: {str(e)}")
+            
+            return
+        
+        # 处理删除注释请求 /api/annotations/delete
+        if path == '/api/annotations/delete':
+            try:
+                # 读取JSON数据
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                
+                # 解析JSON
+                request_data = json.loads(post_data.decode('utf-8'))
+                book_id = request_data.get('bookId')
+                annotation_id = request_data.get('annotationId')
+                
+                if not book_id or not annotation_id:
+                    self.send_error(400, "Missing bookId or annotationId")
+                    return
+                
+                print(f"📝 [API] 删除注释请求: {book_id} -> {annotation_id}")
+                
+                # 使用数据管理器删除注释
+                success = data_manager.remove_annotation(book_id, annotation_id)
+                
+                if success:
+                    print(f"✅ [API] 注释删除成功: {annotation_id}")
+                    
+                    # 返回成功响应
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json; charset=utf-8')
+                    self.end_headers()
+                    
+                    response = {
+                        'success': True,
+                        'message': '注释删除成功',
+                        'bookId': book_id,
+                        'annotationId': annotation_id
+                    }
+                    
+                    self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                else:
+                    self.send_error(404, f"Annotation not found: {annotation_id}")
+                    
+            except Exception as e:
+                print(f"❌ [API] 删除注释失败: {e}")
+                self.send_error(500, f"Delete annotation failed: {str(e)}")
+            
+            return
+        
+        # 处理更新注释请求 /api/annotations/update
+        if path == '/api/annotations/update':
+            try:
+                # 读取JSON数据
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                
+                # 解析JSON
+                request_data = json.loads(post_data.decode('utf-8'))
+                book_id = request_data.get('bookId')
+                annotation_id = request_data.get('annotationId')
+                updates = request_data.get('updates')
+                
+                if not book_id or not annotation_id or not updates:
+                    self.send_error(400, "Missing bookId, annotationId or updates")
+                    return
+                
+                print(f"📝 [API] 更新注释请求: {book_id} -> {annotation_id}")
+                print(f"📝 [API] 更新内容: {updates}")
+                
+                # 使用数据管理器更新注释
+                success = data_manager.update_annotation(book_id, annotation_id, updates)
+                
+                if success:
+                    print(f"✅ [API] 注释更新成功: {annotation_id}")
+                    
+                    # 返回成功响应
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json; charset=utf-8')
+                    self.end_headers()
+                    
+                    response = {
+                        'success': True,
+                        'message': '注释更新成功',
+                        'bookId': book_id,
+                        'annotationId': annotation_id
+                    }
+                    
+                    self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                else:
+                    self.send_error(404, f"Annotation not found: {annotation_id}")
+                    
+            except Exception as e:
+                print(f"❌ [API] 更新注释失败: {e}")
+                self.send_error(500, f"Update annotation failed: {str(e)}")
+            
+            return
+        
+        # 处理清除注释请求 /api/annotations/clear
+        if path == '/api/annotations/clear':
+            try:
+                # 读取JSON数据
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                
+                # 解析JSON
+                request_data = json.loads(post_data.decode('utf-8'))
+                book_id = request_data.get('bookId')
+                annotation_type = request_data.get('type')  # 可选，指定类型
+                
+                if not book_id:
+                    self.send_error(400, "Missing bookId")
+                    return
+                
+                print(f"📝 [API] 清除注释请求: {book_id}, type: {annotation_type}")
+                
+                # 使用数据管理器清除注释
+                cleared_count = data_manager.clear_book_annotations(book_id, annotation_type)
+                
+                print(f"✅ [API] 注释清除成功: {cleared_count} 个")
+                
+                # 返回成功响应
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.end_headers()
+                
+                response = {
+                    'success': True,
+                    'message': f'成功清除 {cleared_count} 个注释',
+                    'bookId': book_id,
+                    'clearedCount': cleared_count,
+                    'type': annotation_type
+                }
+                
+                self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                    
+            except Exception as e:
+                print(f"❌ [API] 清除注释失败: {e}")
+                self.send_error(500, f"Clear annotations failed: {str(e)}")
+            
+            return
+        
         # 处理删除书籍请求 /api/delete-book
         if path == '/api/delete-book':
             try:

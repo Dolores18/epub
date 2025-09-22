@@ -1,0 +1,97 @@
+<!-- 注释面板 (默认隐藏) -->
+<div class="annotations-panel" id="annotationsPanel">
+    <div class="annotations-content">
+        <div class="annotations-header">
+            <h3>📝 笔记与标注</h3>
+            <button class="close-annotations-btn" data-action="close-panel">×</button>
+        </div>
+
+        <div class="annotations-body">
+            <!-- 注释工具栏 -->
+            <div class="annotation-toolbar" id="annotationToolbar" style="display: none;">
+                <div class="toolbar-buttons">
+                    <button id="dictionaryBtn" data-action="dictionary" title="词典查询">
+                        📖 词典
+                    </button>
+                    <button id="highlightBtn" data-action="highlight" title="高亮标注">
+                        🟡 高亮
+                    </button>
+                    <button id="underlineBtn" data-action="underline" title="下划线标注">
+                        📏 下划线
+                    </button>
+                    <button id="noteBtn" data-action="note" title="添加笔记">
+                        📝 笔记
+                    </button>
+                    <button id="removeBtn" data-action="remove" title="删除标注">
+                        🗑️ 删除
+                    </button>
+                </div>
+                <div class="selected-text" id="selectedText"></div>
+            </div>
+
+            <!-- 注释列表 -->
+            <div class="annotations-list">
+                <div class="annotations-header-section">
+                    <h4>已保存的标注</h4>
+                    <div class="filter-controls">
+                        <select id="annotationFilter" data-action="filter">
+                            <option value="all">全部标注</option>
+                            <option value="highlight">高亮</option>
+                            <option value="underline">下划线</option>
+                            <option value="note">笔记</option>
+                        </select>
+                        <button data-action="clear-all" class="clear-btn" title="清除所有标注">
+                            🗑️ 清空
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="annotationsList" class="annotations-items">
+                    <div class="no-annotations" id="noAnnotations">
+                        <p>📝 还没有任何标注</p>
+                        <p class="help-text">选择文本后点击上方的工具栏按钮来添加标注</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 注释编辑弹窗 -->
+<div class="annotation-modal" id="annotationModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4 id="modalTitle">编辑笔记</h4>
+            <button class="modal-close" data-action="close-modal">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="selected-text-display" id="modalSelectedText"></div>
+            <div class="note-input-section">
+                <label for="noteInput">笔记内容：</label>
+                <textarea id="noteInput" placeholder="在此输入您的笔记内容..." rows="4"></textarea>
+            </div>
+            <div class="annotation-colors">
+                <label>标注颜色：</label>
+                <div class="color-options">
+                    <button class="color-btn yellow" data-color="yellow" title="黄色">🟡</button>
+                    <button class="color-btn green" data-color="green" title="绿色">🟢</button>
+                    <button class="color-btn blue" data-color="blue" title="蓝色">🔵</button>
+                    <button class="color-btn pink" data-color="pink" title="粉色">🩷</button>
+                    <button class="color-btn purple" data-color="purple" title="紫色">🟣</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button data-action="save-annotation" class="save-btn">💾 保存</button>
+            <button data-action="close-modal" class="cancel-btn">❌ 取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 注释快捷工具条 (选择文本时显示) -->
+<div class="annotation-tooltip" id="annotationTooltip" style="display: none;">
+    <button data-action="quick-dictionary" title="词典查询">📖</button>
+    <button data-action="quick-highlight" title="快速高亮">🟡</button>
+    <button data-action="quick-underline" title="快速下划线">📏</button>
+    <button data-action="quick-note" title="添加笔记">📝</button>
+</div>

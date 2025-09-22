@@ -425,7 +425,9 @@ async function initReader(file = null) {
 
                 // 设置当前书籍ID（用于默认书籍）
                 currentBookId = await getBookId(book);
+                window.currentBookId = currentBookId; // 设置为全局变量，供其他模块使用
                 console.log('📚 设置当前书籍ID:', currentBookId);
+                console.log('🌐 全局书籍ID已设置:', window.currentBookId);
 
                 // 加载字体设置
                 await loadBookFontSettings(currentBookId);
@@ -791,6 +793,16 @@ function setupEventListeners() {
                 console.log('🔤 [字体] 无书籍字体设置，使用默认');
             }
         }, 100); // 延迟100ms确保DOM完全渲染
+        
+        // 恢复高亮标注
+        setTimeout(() => {
+            if (window.Dictionary && typeof window.Dictionary.loadHighlights === 'function') {
+                console.log('🎨 [高亮] 页面渲染完成，开始恢复高亮');
+                window.Dictionary.loadHighlights();
+            } else {
+                console.log('🎨 [高亮] 词典系统未准备就绪，跳过高亮恢复');
+            }
+        }, 200); // 延迟200ms确保字体设置完成
     });
 
     rendition.on('layout', (layout) => {
@@ -1748,7 +1760,9 @@ async function loadBookFromAPI(bookId) {
     try {
         // 设置当前书籍ID
         currentBookId = bookId;
+        window.currentBookId = currentBookId; // 设置为全局变量，供其他模块使用
         console.log('📚 设置当前书籍ID:', currentBookId);
+        console.log('🌐 全局书籍ID已设置:', window.currentBookId);
         
         // 构建API URL
         const apiUrl = `/api/book/${encodeURIComponent(bookId)}`;

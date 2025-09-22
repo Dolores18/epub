@@ -140,6 +140,19 @@ function createDictionaryPanel() {
                     ${texts.description}
                 </p>
             </div>
+            <div class="action-menu">
+                <div class="action-header">
+                    <h4>🔧 操作菜单</h4>
+                </div>
+                <div class="action-buttons">
+                    <button onclick="searchSelectedText()" title="查询选中文本" class="action-btn query-btn">
+                        🔍 查询
+                    </button>
+                    <button onclick="highlightSelectedText()" title="高亮选中文本" class="action-btn highlight-btn">
+                        🖍️ 高亮
+                    </button>
+                </div>
+            </div>
             <div class="dict-controls">
                 <button onclick="copySelectedText()" title="复制选中文本">📋</button>
                 <button onclick="toggleDictionary()" title="开关词典功能">🔧</button>
@@ -351,11 +364,87 @@ function addDictionaryStyles() {
             border-color: #667eea;
         }
         
+        /* 操作菜单样式 */
+        .action-menu {
+            margin-bottom: 20px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        
+        .action-header h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            background: white;
+            color: #333;
+            text-align: center;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .query-btn {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .query-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .highlight-btn {
+            border-color: #28a745;
+            color: #28a745;
+        }
+        
+        .highlight-btn:hover {
+            background: #28a745;
+            color: white;
+        }
+        
         /* 选中文本高亮 */
         .text-highlight {
             background-color: #fff3cd;
             border-radius: 3px;
             padding: 2px 4px;
+        }
+        
+        /* 用户高亮样式 */
+        .user-highlight {
+            background-color: #ffeb3b !important;
+            color: #333 !important;
+            border-radius: 3px;
+            padding: 1px 2px;
+            box-shadow: 0 1px 3px rgba(255, 235, 59, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .user-highlight:hover {
+            background-color: #ffc107 !important;
+            box-shadow: 0 2px 6px rgba(255, 193, 7, 0.4);
         }
         
 
@@ -443,6 +532,10 @@ function bindEpubSelectionEvents() {
             console.log('🔍 contents.window:', contents?.window);
 
             try {
+                // 保存CFI范围用于高亮功能
+                window.lastSelectedCfiRange = cfiRange;
+                console.log('🔍 已保存CFI范围用于高亮:', cfiRange);
+
                 // 从contents获取选中的文本
                 const selection = contents.window.getSelection();
                 console.log('🔍 selection对象:', selection);
@@ -1190,6 +1283,450 @@ function searchSelectedText() {
     }
 }
 
+// 高亮选中文本
+function highlightSelectedText() {
+    console.log('🖍️ highlightSelectedText() 被调用');
+    console.log('🔍 当前selectedText:', selectedText);
+    console.log('🔍 isDictionaryEnabled:', isDictionaryEnabled);
+
+    if (!isDictionaryEnabled) {
+        console.log('🔍 词典功能已禁用，跳过高亮');
+        showNotification('请先启用词典功能');
+        return false;
+    }
+
+    // 检查是否有有效的rendition和annotations对象
+    if (!window.rendition) {
+        console.error('❌ rendition不存在，无法执行高亮');
+        showNotification('EPUB阅读器未准备就绪');
+        return false;
+    }
+
+    if (!window.rendition.annotations) {
+        console.error('❌ annotations对象不存在，无法执行高亮');
+        showNotification('高亮功能未准备就绪');
+        return false;
+    }
+
+    // 尝试获取当前选中的CFI范围
+    let currentCfiRange = null;
+    let currentText = '';
+
+    try {
+        // 从epub.js的选择事件中获取当前CFI范围
+        if (window.lastSelectedCfiRange) {
+            currentCfiRange = window.lastSelectedCfiRange;
+            console.log('🔍 使用存储的CFI范围:', currentCfiRange);
+        }
+
+        // 如果没有CFI范围，尝试从当前选择生成
+        if (!currentCfiRange && window.rendition.manager) {
+            const views = window.rendition.manager.views();
+            for (const view of views) {
+                if (view.document) {
+                    const selection = (view.window || view.document.defaultView).getSelection();
+                    const text = selection.toString().trim();
+                    if (text && selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        currentText = text;
+                        // 生成CFI范围
+                        try {
+                            currentCfiRange = view.cfiFromRange(range);
+                            console.log('🔍 从选择生成CFI范围:', currentCfiRange);
+                        } catch (cfiError) {
+                            console.error('❌ 生成CFI范围失败:', cfiError);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ 获取CFI范围失败:', error);
+    }
+
+    // 如果有CFI范围，执行高亮
+    if (currentCfiRange) {
+        try {
+            console.log('🖍️ 开始执行高亮，CFI范围:', currentCfiRange);
+            
+            // 调用epub.js的高亮API
+            const highlightData = {
+                timestamp: new Date().toISOString(),
+                text: currentText || selectedText || '高亮文本',
+                note: '用户高亮'
+            };
+
+            // 执行高亮
+            window.rendition.annotations.highlight(
+                currentCfiRange,
+                highlightData,
+                (event) => {
+                    console.log('🖍️ 高亮被点击:', event);
+                    // 点击高亮时的回调，可以显示高亮信息或编辑
+                },
+                "user-highlight", // CSS类名
+                { "background-color": "#ffeb3b", "color": "#333" } // 样式
+            );
+
+            console.log('✅ 高亮添加成功');
+            // showNotification('文本已高亮'); // 已注释：去掉弹窗通知
+            
+            // 乐观模式：立即保存高亮到后端（不等待响应）
+            console.log('🔄 准备调用后端保存函数...');
+            console.log('📋 保存参数预览:', {
+                cfiRange: currentCfiRange,
+                text: currentText || selectedText,
+                highlightDataKeys: Object.keys(highlightData || {})
+            });
+            saveHighlightToBackend(currentCfiRange, currentText || selectedText, highlightData);
+            
+            // 清除选择
+            clearCurrentSelection();
+            
+            // 隐藏词典面板（如果在高亮模式下不需要显示）
+            hideDictionary();
+            
+            return true;
+
+        } catch (error) {
+            console.error('❌ 执行高亮失败:', error);
+            showNotification('高亮失败: ' + error.message);
+            return false;
+        }
+    } else {
+        console.warn('⚠️ 没有找到有效的CFI范围');
+        showNotification('无法获取选中内容的位置信息');
+        return false;
+    }
+}
+
+// 清除当前选择
+function clearCurrentSelection() {
+    console.log('🔍 清除当前选择');
+    
+    try {
+        // 清除epub视图中的选择
+        if (window.rendition && window.rendition.manager) {
+            const views = window.rendition.manager.views();
+            for (const view of views) {
+                if (view.document) {
+                    const selection = (view.window || view.document.defaultView).getSelection();
+                    if (selection && selection.removeAllRanges) {
+                        selection.removeAllRanges();
+                        console.log('🔍 已清除epub视图选择');
+                    }
+                }
+            }
+        }
+
+        // 清除主文档的选择
+        if (window.getSelection) {
+            const mainSelection = window.getSelection();
+            if (mainSelection && mainSelection.removeAllRanges) {
+                mainSelection.removeAllRanges();
+                console.log('🔍 已清除主文档选择');
+            }
+        }
+
+        // 清除存储的CFI范围
+        window.lastSelectedCfiRange = null;
+        console.log('🔍 已清除存储的CFI范围');
+
+    } catch (error) {
+        console.error('❌ 清除选择失败:', error);
+    }
+}
+
+// 乐观模式保存高亮到后端
+function saveHighlightToBackend(cfiRange, text, highlightData) {
+    console.log('🚀 ===== 开始保存高亮到后端 =====');
+    console.log('📚 输入参数:', {
+        cfiRange: cfiRange,
+        text: text,
+        highlightData: highlightData
+    });
+    
+    // 检查是否有当前书籍ID
+    if (!window.currentBookId) {
+        console.error('❌ 没有当前书籍ID，无法保存高亮');
+        console.log('🔍 当前window对象检查:', {
+            currentBookId: window.currentBookId,
+            hasWindow: typeof window !== 'undefined',
+            windowKeys: Object.keys(window).filter(key => key.includes('book') || key.includes('Book')),
+            locationHref: window.location?.href,
+            locationSearch: window.location?.search
+        });
+        
+        // 尝试从URL参数中获取bookId作为备用方案
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookIdFromUrl = urlParams.get('bookId');
+        if (bookIdFromUrl) {
+            console.log('🔧 尝试从URL参数获取书籍ID:', bookIdFromUrl);
+            window.currentBookId = bookIdFromUrl;
+            console.log('✅ 从URL成功设置书籍ID:', window.currentBookId);
+        } else {
+            console.error('❌ URL中也没有找到bookId参数');
+            // showNotification('❌ 无法保存高亮：缺少书籍ID'); // 已注释：去掉弹窗通知
+            return;
+        }
+    }
+    
+    console.log('✅ 书籍ID验证通过:', window.currentBookId);
+    
+    // 构建注释数据
+    const annotationData = {
+        type: 'highlight',
+        cfiRange: cfiRange,
+        text: text || '高亮文本',
+        color: 'yellow',
+        className: 'user-highlight',
+        timestamp: new Date().toISOString(),
+        note: highlightData.note || '',
+        // 添加来源标识
+        source: 'dictionary-highlight',
+        // 可选的章节信息（如果可以获取的话）
+        chapterTitle: getCurrentChapterTitle(),
+        chapterIndex: getCurrentChapterIndex()
+    };
+    
+    console.log('📝 构建的注释数据:', JSON.stringify(annotationData, null, 2));
+    console.log('🎯 目标书籍ID:', window.currentBookId);
+    console.log('🌐 即将发送POST请求到: /api/annotations');
+    
+    // 构建请求体
+    const requestBody = {
+        bookId: window.currentBookId,
+        annotation: annotationData
+    };
+    
+    console.log('📦 即将发送的请求体:', JSON.stringify(requestBody, null, 2));
+    console.log('📏 请求体大小:', JSON.stringify(requestBody).length, '字节');
+    
+    // 乐观模式：不等待响应，立即发送请求
+    console.log('🌐 开始发送HTTP POST请求...');
+    fetch('/api/annotations', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+    })
+    .then(response => {
+        console.log('🌐 收到服务器响应:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+    })
+    .then(data => {
+        console.log('✅ 高亮保存成功! 服务器响应:', data);
+        console.log('📝 注释详情:', {
+            bookId: data.bookId,
+            annotationId: data.annotationId,
+            annotationType: data.annotationType,
+            timestamp: data.timestamp,
+            message: data.message
+        });
+        
+        // 显示成功通知
+        if (data.success) {
+            console.log('💾 注释已成功保存到数据库');
+            // showNotification(`✅ 高亮保存成功 (ID: ${data.annotationId?.slice(-8) || 'unknown'})`); // 已注释：去掉弹窗通知
+        }
+        
+        // 可以在这里更新本地缓存或执行其他成功后的操作
+        if (data.annotationId) {
+            console.log('🆔 服务器返回的注释ID:', data.annotationId);
+        }
+    })
+    .catch(error => {
+        console.error('❌ 高亮保存失败! 错误详情:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        
+        // 记录详细的错误信息到控制台（不显示弹窗）
+        if (error.message.includes('HTTP')) {
+            console.error('🌐 HTTP错误:', error.message);
+            // showNotification(`❌ 网络错误: ${error.message}`); // 已注释：去掉弹窗通知
+        } else if (error.message.includes('Failed to fetch')) {
+            console.error('🔌 网络连接失败');
+            // showNotification('❌ 网络连接失败，请检查服务器状态'); // 已注释：去掉弹窗通知
+        } else {
+            console.error('🐛 未知错误:', error);
+            // showNotification('❌ 保存失败，但本地显示正常'); // 已注释：去掉弹窗通知
+        }
+        
+        // 乐观模式：即使保存失败也不影响用户体验
+        // 可以在这里实现重试机制或者离线存储
+        console.warn('⚠️ 采用乐观模式，本地高亮仍然生效');
+    });
+}
+
+// 获取当前章节标题（辅助函数）
+function getCurrentChapterTitle() {
+    try {
+        // 尝试从当前位置获取章节信息
+        if (window.currentLocation && window.currentLocation.start) {
+            const section = window.book?.spine?.get(window.currentLocation.start.index);
+            return section?.href || section?.id || '未知章节';
+        }
+        return null;
+    } catch (error) {
+        console.warn('⚠️ 获取章节标题失败:', error);
+        return null;
+    }
+}
+
+// 获取当前章节索引（辅助函数）
+function getCurrentChapterIndex() {
+    try {
+        if (window.currentLocation && window.currentLocation.start) {
+            return window.currentLocation.start.index || 0;
+        }
+        return null;
+    } catch (error) {
+        console.warn('⚠️ 获取章节索引失败:', error);
+        return null;
+    }
+}
+
+// 从后端加载并恢复高亮
+async function loadAndRestoreHighlights() {
+    console.log('🎨 开始加载并恢复高亮...');
+    
+    // 检查必需的条件
+    if (!window.currentBookId) {
+        console.warn('⚠️ 没有当前书籍ID，无法加载高亮');
+        return;
+    }
+    
+    if (!window.rendition || !window.rendition.annotations) {
+        console.warn('⚠️ rendition或annotations不可用，无法恢复高亮');
+        return;
+    }
+    
+    try {
+        console.log('🎨 从后端获取高亮数据...');
+        
+        // 从后端获取当前书籍的高亮数据
+        const response = await fetch(`/api/annotations/${window.currentBookId}?type=highlight`);
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.log('📝 当前书籍没有高亮数据');
+                return;
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const highlightsData = await response.json();
+        console.log('🎨 获取到的高亮数据:', highlightsData);
+        
+        if (!highlightsData.annotations || highlightsData.annotations.length === 0) {
+            console.log('📝 当前书籍没有高亮注释');
+            return;
+        }
+        
+        // 恢复每个高亮
+        let restoredCount = 0;
+        let failedCount = 0;
+        
+        for (const annotation of highlightsData.annotations) {
+            try {
+                if (annotation.type === 'highlight' && annotation.cfiRange) {
+                    console.log('🎨 恢复高亮:', annotation.cfiRange);
+                    
+                    // 构建高亮数据
+                    const highlightData = {
+                        id: annotation.id,
+                        text: annotation.text || '',
+                        note: annotation.note || '',
+                        timestamp: annotation.timestamp
+                    };
+                    
+                    // 使用epub.js的highlight方法恢复高亮
+                    window.rendition.annotations.highlight(
+                        annotation.cfiRange,
+                        highlightData,
+                        (event) => {
+                            console.log('🎨 恢复的高亮被点击:', annotation.id);
+                            // 可以在这里添加点击高亮的处理逻辑
+                        },
+                        annotation.className || "user-highlight",
+                        {
+                            "background-color": getHighlightColor(annotation.color),
+                            "color": "#333"
+                        }
+                    );
+                    
+                    restoredCount++;
+                    console.log('✅ 高亮恢复成功:', annotation.id);
+                }
+            } catch (error) {
+                console.error('❌ 恢复高亮失败:', annotation.id, error);
+                failedCount++;
+            }
+        }
+        
+        console.log(`🎨 高亮恢复完成: 成功 ${restoredCount} 个, 失败 ${failedCount} 个`);
+        
+        if (restoredCount > 0) {
+            // showNotification(`✅ 已恢复 ${restoredCount} 个高亮`); // 已注释：去掉弹窗通知
+        }
+        
+    } catch (error) {
+        console.error('❌ 加载高亮数据失败:', error);
+        // 不显示错误通知，避免干扰用户
+    }
+}
+
+// 获取高亮颜色的辅助函数
+function getHighlightColor(colorName) {
+    const colorMap = {
+        'yellow': '#ffeb3b',
+        'green': '#4caf50',
+        'blue': '#2196f3',
+        'pink': '#e91e63',
+        'purple': '#9c27b0',
+        'orange': '#ff9800',
+        'red': '#f44336'
+    };
+    
+    return colorMap[colorName] || '#ffeb3b'; // 默认黄色
+}
+
+// 清除当前页面的所有高亮（用于刷新）
+function clearCurrentPageHighlights() {
+    console.log('🧹 清除当前页面的高亮...');
+    
+    try {
+        if (window.rendition && window.rendition.annotations) {
+            // 获取当前页面的所有高亮
+            const highlights = window.rendition.annotations.highlights || {};
+            
+            // 移除所有高亮
+            for (const cfiRange in highlights) {
+                window.rendition.annotations.remove(cfiRange, 'highlight');
+            }
+            
+            console.log('🧹 当前页面高亮已清除');
+        }
+    } catch (error) {
+        console.error('❌ 清除高亮失败:', error);
+    }
+}
+
 // 测试epub.js文本选择功能
 function testEpubTextSelection() {
     console.log('🧪 测试epub.js文本选择功能:');
@@ -1277,34 +1814,63 @@ function showQueryButton(selection, contents) {
     hideQueryButton();
 
     try {
-        // 创建查询按钮（固定居中显示）
-        const queryBtn = document.createElement('button');
-        queryBtn.id = 'textQueryBtn';
-        queryBtn.innerHTML = '🔍 查询选中文本';
-        queryBtn.style.cssText = `
+        // 创建操作按钮容器（固定居中显示）
+        const buttonContainer = document.createElement('div');
+        buttonContainer.id = 'textQueryBtn';
+        buttonContainer.style.cssText = `
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            z-index: 3000;
+            display: flex;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        `;
+
+        // 创建查询按钮
+        const queryBtn = document.createElement('button');
+        queryBtn.innerHTML = '🔍 查询';
+        queryBtn.style.cssText = `
             background: #667eea;
             color: white;
             border: none;
             border-radius: 8px;
-            padding: 12px 20px;
+            padding: 10px 16px;
             font-size: 14px;
             cursor: pointer;
-            z-index: 3000;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             transition: all 0.2s;
             font-weight: 500;
+            min-width: 80px;
         `;
 
-        // 点击查询
+        // 创建高亮按钮
+        const highlightBtn = document.createElement('button');
+        highlightBtn.innerHTML = '🖍️ 高亮';
+        highlightBtn.style.cssText = `
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            min-width: 80px;
+        `;
+
+        // 查询按钮点击事件
         queryBtn.onclick = async function (event) {
             console.log('🎯 ===== 查询按钮点击事件触发 =====');
             console.log('🔍 查询文本:', selectedText);
 
-            // 隐藏查询按钮
+            // 隐藏操作按钮
             hideQueryButton();
 
             // 显示加载提示
@@ -1330,24 +1896,49 @@ function showQueryButton(selection, contents) {
             }
         };
 
+        // 高亮按钮点击事件
+        highlightBtn.onclick = function (event) {
+            console.log('🎯 ===== 高亮按钮点击事件触发 =====');
+            console.log('🖍️ 高亮文本:', selectedText);
+
+            // 隐藏操作按钮
+            hideQueryButton();
+
+            // 直接执行高亮功能
+            highlightSelectedText();
+        };
+
         // 鼠标悬停效果
         queryBtn.onmouseenter = function () {
             this.style.background = '#5a6fd8';
-            this.style.transform = 'translate(-50%, -50%) scale(1.05)';
+            this.style.transform = 'scale(1.05)';
         };
 
         queryBtn.onmouseleave = function () {
             this.style.background = '#667eea';
-            this.style.transform = 'translate(-50%, -50%) scale(1)';
+            this.style.transform = 'scale(1)';
         };
 
-        document.body.appendChild(queryBtn);
+        highlightBtn.onmouseenter = function () {
+            this.style.background = '#218838';
+            this.style.transform = 'scale(1.05)';
+        };
 
-        // 3秒后自动隐藏
-        setTimeout(hideQueryButton, 3000);
+        highlightBtn.onmouseleave = function () {
+            this.style.background = '#28a745';
+            this.style.transform = 'scale(1)';
+        };
+
+        // 组装按钮
+        buttonContainer.appendChild(queryBtn);
+        buttonContainer.appendChild(highlightBtn);
+        document.body.appendChild(buttonContainer);
+
+        // 5秒后自动隐藏
+        setTimeout(hideQueryButton, 5000);
 
     } catch (error) {
-        console.error('❌ 显示查询按钮失败:', error);
+        console.error('❌ 显示操作按钮失败:', error);
     }
 }
 
@@ -1543,18 +2134,24 @@ window.Dictionary = {
     toggle: toggleDictionary,
     search: searchWord,
     searchSelected: searchSelectedText,
+    highlight: highlightSelectedText,
     copy: copySelectedText,
     clear: clearSearch,
+    clearSelection: clearCurrentSelection,
     test: testEpubTextSelection,
     bindRendition: bindRenditionManually,
     forceRebind: forceRebind,
     onLanguageUpdated: onLanguageUpdated,
     updateTexts: updateDictionaryTexts,
-    playAudio: playAudio
+    playAudio: playAudio,
+    saveHighlight: saveHighlightToBackend,
+    loadHighlights: loadAndRestoreHighlights,
+    clearHighlights: clearCurrentPageHighlights
 };
 
 // 也暴露为全局函数，供HTML直接调用
 window.playAudio = playAudio;
+window.highlightSelectedText = highlightSelectedText;
 
 // 自动初始化
 document.addEventListener('DOMContentLoaded', function () {
