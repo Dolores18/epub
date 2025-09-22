@@ -829,6 +829,11 @@ function showDictionary() {
 
 // 隐藏词典面板
 function hideDictionary() {
+    console.log('🔍 [hideDictionary] 隐藏词典面板');
+    
+    // 停止并清理音频资源
+    AudioManager.stop();
+    
     if (dictionaryPanel) {
         dictionaryPanel.classList.remove('show');
     }
@@ -1049,37 +1054,97 @@ function clearSearch() {
     showNotification('搜索已清空');
 }
 
-// 播放音频
-function playAudio(audioUrl) {
-    console.log('🔊 播放音频:', audioUrl);
+// 音频管理器 - 单例模式管理音频对象
+const AudioManager = {
+    currentAudio: null,
     
-    if (!audioUrl) {
-        console.warn('⚠️ 音频URL为空，无法播放');
-        return;
-    }
-    
-    try {
-        // 创建音频对象
-        const audio = new Audio(audioUrl);
+    // 播放音频
+    play: function(audioUrl) {
+        console.log('🔊 [AudioManager] 播放音频:', audioUrl);
         
-        // 设置音频属性
-        audio.preload = 'auto';
-        audio.volume = 0.8;
+        if (!audioUrl) {
+            console.warn('⚠️ [AudioManager] 音频URL为空，无法播放');
+            return;
+        }
         
-        // 播放音频
-        audio.play().then(() => {
-            console.log('✅ 音频播放成功');
-        }).catch(error => {
-            console.error('❌ 音频播放失败:', error);
-            // 如果播放失败，尝试在新窗口打开
+        // 停止当前正在播放的音频
+        this.stop();
+        
+        try {
+            // 创建新的音频对象
+            this.currentAudio = new Audio(audioUrl);
+            
+            // 设置音频属性
+            this.currentAudio.preload = 'auto';
+            this.currentAudio.volume = 0.8;
+            
+            // 监听播放结束事件，自动释放资源
+            this.currentAudio.addEventListener('ended', () => {
+                console.log('🔊 [AudioManager] 音频播放完成，释放资源');
+                this.cleanup();
+            });
+            
+            // 监听错误事件
+            this.currentAudio.addEventListener('error', (error) => {
+                console.error('❌ [AudioManager] 音频播放出错:', error);
+                this.cleanup();
+            });
+            
+            // 播放音频
+            this.currentAudio.play().then(() => {
+                console.log('✅ [AudioManager] 音频播放成功');
+            }).catch(error => {
+                console.error('❌ [AudioManager] 音频播放失败:', error);
+                this.cleanup();
+                // 如果播放失败，尝试在新窗口打开
+                window.open(audioUrl, '_blank');
+            });
+            
+        } catch (error) {
+            console.error('❌ [AudioManager] 创建音频对象失败:', error);
+            this.cleanup();
+            // 备用方案：在新窗口打开音频链接
             window.open(audioUrl, '_blank');
-        });
-        
-    } catch (error) {
-        console.error('❌ 创建音频对象失败:', error);
-        // 备用方案：在新窗口打开音频链接
-        window.open(audioUrl, '_blank');
+        }
+    },
+    
+    // 停止当前音频
+    stop: function() {
+        if (this.currentAudio) {
+            console.log('🔊 [AudioManager] 停止当前音频');
+            this.currentAudio.pause();
+            this.currentAudio.currentTime = 0;
+            this.cleanup();
+        }
+    },
+    
+    // 清理音频资源
+    cleanup: function() {
+        if (this.currentAudio) {
+            console.log('🔊 [AudioManager] 清理音频资源');
+            
+            // 移除所有事件监听器
+            this.currentAudio.removeEventListener('ended', this.cleanup);
+            this.currentAudio.removeEventListener('error', this.cleanup);
+            
+            // 设置src为空，释放资源
+            this.currentAudio.src = '';
+            this.currentAudio.load(); // 重置audio元素
+            
+            // 清空引用
+            this.currentAudio = null;
+        }
+    },
+    
+    // 检查是否正在播放
+    isPlaying: function() {
+        return this.currentAudio && !this.currentAudio.paused;
     }
+};
+
+// 播放音频 - 使用音频管理器
+function playAudio(audioUrl) {
+    AudioManager.play(audioUrl);
 }
 
 // 查询选中文本
@@ -1452,6 +1517,11 @@ function showDictionaryModal(content) {
 
 // 隐藏词典模态窗口
 function hideDictionaryModal() {
+    console.log('🔍 [hideDictionaryModal] 隐藏词典模态窗口');
+    
+    // 停止并清理音频资源
+    AudioManager.stop();
+    
     const modal = document.getElementById('dictionaryModal');
     if (modal) {
         modal.remove();
@@ -1490,4 +1560,10 @@ window.playAudio = playAudio;
 document.addEventListener('DOMContentLoaded', function () {
     // 延迟初始化，确保epub.js已加载
     setTimeout(initDictionary, 1000);
+});
+
+// 页面卸载时清理音频资源
+window.addEventListener('beforeunload', function () {
+    console.log('🔊 [beforeunload] 页面卸载，清理音频资源');
+    AudioManager.stop();
 }); 
