@@ -38,6 +38,14 @@ body {
     font-style: normal;
 }
 
+/* 引入 Bookerly 字体 */
+@font-face {
+    font-family: 'Bookerly';
+    src: url('../fonts/Bookerly.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 /* 为日文内容设置字体 */
 .japanese-text {
     font-family: 'IPAexMincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', serif;
@@ -736,8 +744,8 @@ body {
     position: absolute !important;
     right: 0px !important;
     bottom: 0px !important;
-    width: 60px !important;
-    height: 60px !important;
+    width: 50px !important;
+    height: 50px !important;
     background: rgba(255, 255, 255, 0.8);
     border-radius: 50%;
     z-index: 998;
@@ -943,7 +951,7 @@ body {
 .exit-btn {
     position: absolute;
     top: 15px;
-    right: 15px;
+    right: 5px;
     width: 40px;
     height: 40px;
     background: rgba(255, 255, 255, 0.9);

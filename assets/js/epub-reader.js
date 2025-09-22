@@ -282,7 +282,7 @@ function getFontFamilyByLanguage(language) {
 
     if (lang === 'ja' || lang === 'jp' || lang === 'japanese' || lang.startsWith('ja-')) {
         debugLog('检测到日文，使用明朝体');
-        return 'IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif';
+        return 'IPAexMinchoWeb, IPAexMincho, Hiragino Mincho ProN, Yu Mincho, MS Mincho, serif';
     } else if (lang === 'zh' || lang === 'zh-cn' || lang === 'zh-tw' || lang === 'chinese' || lang.startsWith('zh-')) {
         debugLog('检测到中文，使用中文字体');
         return 'SimSun, "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif';
@@ -290,8 +290,9 @@ function getFontFamilyByLanguage(language) {
         debugLog('检测到韩文，使用韩文字体');
         return 'Batang, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
     } else {
-        debugLog('检测到其他语言，使用系统默认字体');
-        return null; // 不设置字体，使用系统默认
+        // 英文或其他语言，使用 Bookerly 字体（适合阅读）
+        debugLog('检测到英文或其他语言，使用 Bookerly 字体');
+        return 'Bookerly, Georgia, "Times New Roman", serif';
     }
 }
 
