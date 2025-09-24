@@ -38,6 +38,141 @@ const dictionaryData = {
 let selectedText = '';
 let dictionaryPanel = null;
 let isDictionaryEnabled = true;
+// 存储当前选中文本对应的注释ID（用于删除）
+let currentHighlightAnnotationId = null;
+
+// 高亮追踪器 - 用于防止重复高亮
+const highlightTracker = new Set();
+
+// 解析CFI范围字符串，提取关键位置信息
+function parseCfiRange(cfiRange) {
+    // CFI格式示例: epubcfi(/6/8!/4/4[int]/6,/3:9,/3:17)
+    // 或: epubcfi(/6/8!/4/8,/1:27,/1:34)
+    try {
+        // 提取基础路径（逗号之前的部分）
+        const basePath = cfiRange.split(',')[0];
+        
+        // 提取起始和结束位置
+        const matches = cfiRange.match(/,(\/.+?),(.+?)\)/);
+        if (matches) {
+            const startPos = matches[1];
+            const endPos = matches[2];
+            
+            // 提取位置数字
+            const startMatch = startPos.match(/\/(\d+):(\d+)/);
+            const endMatch = endPos.match(/\/(\d+):(\d+)/);
+            
+            if (startMatch && endMatch) {
+                return {
+                    basePath: basePath,
+                    startNode: parseInt(startMatch[1]),
+                    startOffset: parseInt(startMatch[2]),
+                    endNode: parseInt(endMatch[1]),
+                    endOffset: parseInt(endMatch[2]),
+                    raw: cfiRange
+                };
+            }
+        }
+    } catch (error) {
+        console.warn('⚠️ CFI解析失败:', cfiRange, error);
+    }
+    return null;
+}
+
+// 检查两个CFI范围是否重叠或几乎相同
+function areCfiRangesOverlapping(cfi1, cfi2) {
+    const parsed1 = typeof cfi1 === 'string' ? parseCfiRange(cfi1) : cfi1;
+    const parsed2 = typeof cfi2 === 'string' ? parseCfiRange(cfi2) : cfi2;
+    
+    if (!parsed1 || !parsed2) {
+        // 如果无法解析，退回到精确匹配
+        return cfi1 === cfi2;
+    }
+    
+    // 检查基础路径是否相同
+    if (parsed1.basePath !== parsed2.basePath) {
+        return false;
+    }
+    
+    // 检查是否是同一个节点
+    if (parsed1.startNode !== parsed2.startNode || parsed1.endNode !== parsed2.endNode) {
+        return false;
+    }
+    
+    // 允许偏移量有小的差异（±1）
+    const startDiff = Math.abs(parsed1.startOffset - parsed2.startOffset);
+    const endDiff = Math.abs(parsed1.endOffset - parsed2.endOffset);
+    
+    // 如果起始和结束位置都非常接近（差异在1个字符内），认为是重复
+    if (startDiff <= 1 && endDiff <= 1) {
+        console.log('🔍 [高亮追踪] 检测到相似CFI范围:');
+        console.log('  CFI1:', parsed1.raw);
+        console.log('  CFI2:', parsed2.raw);
+        console.log('  起始差异:', startDiff, '结束差异:', endDiff);
+        return true;
+    }
+    
+    // 检查是否有重叠（一个范围包含另一个）
+    const range1Start = parsed1.startOffset;
+    const range1End = parsed1.endOffset;
+    const range2Start = parsed2.startOffset;
+    const range2End = parsed2.endOffset;
+    
+    // 检查是否有任何重叠
+    const hasOverlap = (range1Start <= range2End && range1End >= range2Start);
+    
+    if (hasOverlap) {
+        console.log('🔍 [高亮追踪] 检测到重叠的CFI范围:');
+        console.log('  CFI1:', parsed1.raw, `[${range1Start}-${range1End}]`);
+        console.log('  CFI2:', parsed2.raw, `[${range2Start}-${range2End}]`);
+    }
+    
+    return hasOverlap;
+}
+
+// 检查CFI范围是否已经被高亮（支持模糊匹配）
+function isAlreadyHighlighted(cfiRange) {
+    // 首先检查精确匹配
+    if (highlightTracker.has(cfiRange)) {
+        console.log('📌 [高亮追踪] 检测到精确匹配的高亮:', cfiRange);
+        return true;
+    }
+    
+    // 然后检查相似或重叠的范围
+    const parsedRange = parseCfiRange(cfiRange);
+    if (parsedRange) {
+        for (const existingCfi of highlightTracker) {
+            if (areCfiRangesOverlapping(parsedRange, existingCfi)) {
+                console.log('📌 [高亮追踪] 检测到相似/重叠的高亮');
+                console.log('  新CFI:', cfiRange);
+                console.log('  现有CFI:', existingCfi);
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+// 添加CFI范围到追踪器
+function addToHighlightTracker(cfiRange) {
+    highlightTracker.add(cfiRange);
+    console.log('📌 [高亮追踪] 添加CFI到追踪器:', cfiRange);
+    console.log('📌 [高亮追踪] 当前追踪数量:', highlightTracker.size);
+}
+
+// 从追踪器移除CFI范围
+function removeFromHighlightTracker(cfiRange) {
+    highlightTracker.delete(cfiRange);
+    console.log('📌 [高亮追踪] 从追踪器移除CFI:', cfiRange);
+    console.log('📌 [高亮追踪] 当前追踪数量:', highlightTracker.size);
+}
+
+// 清空高亮追踪器（用于切换书籍时）
+function clearHighlightTracker() {
+    highlightTracker.clear();
+    console.log('📌 [高亮追踪] 追踪器已清空');
+}
 
 // 初始化词典功能
 function initDictionary() {
@@ -1291,6 +1426,124 @@ function searchSelectedText() {
     }
 }
 
+// 删除高亮文本
+async function deleteHighlight() {
+    console.log('🗑️ deleteHighlight() 被调用');
+    console.log('🔍 当前CFI范围:', window.lastSelectedCfiRange);
+    console.log('🔍 当前注释ID:', currentHighlightAnnotationId);
+    
+    if (!window.lastSelectedCfiRange) {
+        console.error('❌ 没有CFI范围，无法删除高亮');
+        showNotification('无法确定要删除的高亮');
+        return false;
+    }
+    
+    // 如果没有注释ID，尝试从后端查找
+    if (!currentHighlightAnnotationId) {
+        console.log('🔍 尝试从后端查找注释ID...');
+        const annotationId = await findAnnotationIdByCfi(window.lastSelectedCfiRange);
+        if (annotationId) {
+            currentHighlightAnnotationId = annotationId;
+            console.log('✅ 找到注释ID:', currentHighlightAnnotationId);
+        } else {
+            console.error('❌ 无法找到对应的注释ID');
+            showNotification('未找到要删除的高亮');
+            return false;
+        }
+    }
+    
+    try {
+        // 1. 从渲染器中移除高亮
+        if (window.rendition && window.rendition.annotations) {
+            console.log('🗑️ 从渲染器移除高亮...');
+            window.rendition.annotations.remove(window.lastSelectedCfiRange, 'highlight');
+        }
+        
+        // 2. 从追踪器中移除
+        removeFromHighlightTracker(window.lastSelectedCfiRange);
+        
+        // 3. 调用后端API删除
+        if (currentHighlightAnnotationId && window.currentBookId) {
+            console.log('🌐 调用后端API删除注释...');
+            const response = await fetch('/api/annotations/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    bookId: window.currentBookId,
+                    annotationId: currentHighlightAnnotationId
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ 高亮删除成功:', data);
+                showNotification('高亮已删除');
+            } else {
+                console.error('❌ 后端删除失败:', response.status);
+                showNotification('删除失败，但本地已移除');
+            }
+        }
+        
+        // 4. 清理状态
+        clearCurrentSelection();
+        hideQueryButton();
+        currentHighlightAnnotationId = null;
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ 删除高亮失败:', error);
+        showNotification('删除高亮失败');
+        return false;
+    }
+}
+
+// 根据CFI范围查找注释ID
+async function findAnnotationIdByCfi(cfiRange) {
+    console.log('🔍 查找注释ID，CFI:', cfiRange);
+    
+    if (!window.currentBookId) {
+        console.error('❌ 没有当前书籍ID');
+        return null;
+    }
+    
+    try {
+        // 获取当前书籍的所有高亮注释
+        const response = await fetch(`/api/annotations/${window.currentBookId}?type=highlight`);
+        
+        if (!response.ok) {
+            console.error('❌ 获取注释失败:', response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        const annotations = data.annotations || [];
+        
+        // 查找匹配的CFI范围（支持模糊匹配）
+        for (const annotation of annotations) {
+            if (annotation.cfiRange === cfiRange) {
+                console.log('✅ 找到精确匹配的注释:', annotation.id);
+                return annotation.id;
+            }
+            
+            // 模糊匹配
+            if (areCfiRangesOverlapping(annotation.cfiRange, cfiRange)) {
+                console.log('✅ 找到相似的注释:', annotation.id);
+                return annotation.id;
+            }
+        }
+        
+        console.log('⚠️ 未找到匹配的注释');
+        return null;
+        
+    } catch (error) {
+        console.error('❌ 查找注释ID失败:', error);
+        return null;
+    }
+}
+
 // 高亮选中文本
 function highlightSelectedText() {
     console.log('🖍️ highlightSelectedText() 被调用');
@@ -1359,6 +1612,21 @@ function highlightSelectedText() {
         try {
             console.log('🖍️ 开始执行高亮，CFI范围:', currentCfiRange);
             
+            // 检查是否已经高亮
+            if (isAlreadyHighlighted(currentCfiRange)) {
+                console.warn('⚠️ 该文本已经被高亮，跳过重复高亮');
+                console.log('📌 [高亮追踪] 检测到重复高亮，CFI:', currentCfiRange);
+                showNotification('该文本已经被高亮');
+                
+                // 清除选择
+                clearCurrentSelection();
+                
+                // 隐藏词典面板
+                hideDictionary();
+                
+                return false;
+            }
+            
             // 调用epub.js的高亮API
             const highlightData = {
                 timestamp: new Date().toISOString(),
@@ -1379,6 +1647,10 @@ function highlightSelectedText() {
             );
 
             console.log('✅ 高亮添加成功');
+            
+            // 将CFI添加到追踪器
+            addToHighlightTracker(currentCfiRange);
+            
             // showNotification('文本已高亮'); // 已注释：去掉弹窗通知
             
             // 乐观模式：立即保存高亮到后端（不等待响应）
@@ -1762,6 +2034,9 @@ async function loadAndRestoreHighlights() {
                         }
                     );
                     
+                    // 将恢复的高亮添加到追踪器（初始加载时不检查重复）
+                    addToHighlightTracker(annotation.cfiRange);
+                    
                     restoredCount++;
                     console.log('✅ 高亮恢复成功:', annotation.id);
                 }
@@ -1810,6 +2085,8 @@ function clearCurrentPageHighlights() {
             // 移除所有高亮
             for (const cfiRange in highlights) {
                 window.rendition.annotations.remove(cfiRange, 'highlight');
+                // 从追踪器中移除
+                removeFromHighlightTracker(cfiRange);
             }
             
             console.log('🧹 当前页面高亮已清除');
@@ -1904,6 +2181,10 @@ function forceRebind() {
 function showQueryButton(selection, contents) {
     // 移除已存在的查询按钮
     hideQueryButton();
+    
+    // 检查选中的文本是否已经被高亮
+    const isHighlighted = window.lastSelectedCfiRange && isAlreadyHighlighted(window.lastSelectedCfiRange);
+    console.log('🔍 检查选中文本是否已高亮:', isHighlighted);
 
     try {
         // 创建操作按钮容器（固定居中显示）
@@ -1940,22 +2221,106 @@ function showQueryButton(selection, contents) {
             font-weight: 500;
             min-width: 80px;
         `;
-
-        // 创建高亮按钮
-        const highlightBtn = document.createElement('button');
-        highlightBtn.innerHTML = '🖍️ 高亮';
-        highlightBtn.style.cssText = `
-            background: #28a745;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 16px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 500;
-            min-width: 80px;
-        `;
+        
+        // 根据是否已高亮决定显示高亮按钮还是删除按钮
+        if (isHighlighted) {
+            // 创建删除按钮
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerHTML = '🗑️ 删除';
+            deleteBtn.style.cssText = `
+                background: #dc3545;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 16px;
+                font-size: 14px;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-weight: 500;
+                min-width: 80px;
+            `;
+            
+            // 删除按钮点击事件
+            deleteBtn.onclick = async function (event) {
+                console.log('🎯 ===== 删除按钮点击事件触发 =====');
+                console.log('🗑️ 删除高亮文本:', selectedText);
+                
+                // 隐藏操作按钮
+                hideQueryButton();
+                
+                // 执行删除功能
+                await deleteHighlight();
+            };
+            
+            // 鼠标悬停效果
+            deleteBtn.onmouseenter = function () {
+                this.style.background = '#c82333';
+                this.style.transform = 'scale(1.05)';
+            };
+            
+            deleteBtn.onmouseleave = function () {
+                this.style.background = '#dc3545';
+                this.style.transform = 'scale(1)';
+            };
+            
+            // 组装按钮（查询+删除）
+            buttonContainer.appendChild(queryBtn);
+            buttonContainer.appendChild(deleteBtn);
+            
+            // 如果找到了注释ID，提前查找并存储
+            if (window.lastSelectedCfiRange) {
+                findAnnotationIdByCfi(window.lastSelectedCfiRange).then(id => {
+                    if (id) {
+                        currentHighlightAnnotationId = id;
+                        console.log('🔍 预先获取注释ID:', currentHighlightAnnotationId);
+                    }
+                });
+            }
+            
+        } else {
+            // 创建高亮按钮
+            const highlightBtn = document.createElement('button');
+            highlightBtn.innerHTML = '🖍️ 高亮';
+            highlightBtn.style.cssText = `
+                background: #28a745;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 16px;
+                font-size: 14px;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-weight: 500;
+                min-width: 80px;
+            `;
+            
+            // 高亮按钮点击事件
+            highlightBtn.onclick = function (event) {
+                console.log('🎯 ===== 高亮按钮点击事件触发 =====');
+                console.log('🖍️ 高亮文本:', selectedText);
+                
+                // 隐藏操作按钮
+                hideQueryButton();
+                
+                // 直接执行高亮功能
+                highlightSelectedText();
+            };
+            
+            // 鼠标悬停效果
+            highlightBtn.onmouseenter = function () {
+                this.style.background = '#218838';
+                this.style.transform = 'scale(1.05)';
+            };
+            
+            highlightBtn.onmouseleave = function () {
+                this.style.background = '#28a745';
+                this.style.transform = 'scale(1)';
+            };
+            
+            // 组装按钮（查询+高亮）
+            buttonContainer.appendChild(queryBtn);
+            buttonContainer.appendChild(highlightBtn);
+        }
 
         // 查询按钮点击事件
         queryBtn.onclick = async function (event) {
@@ -1988,18 +2353,6 @@ function showQueryButton(selection, contents) {
             }
         };
 
-        // 高亮按钮点击事件
-        highlightBtn.onclick = function (event) {
-            console.log('🎯 ===== 高亮按钮点击事件触发 =====');
-            console.log('🖍️ 高亮文本:', selectedText);
-
-            // 隐藏操作按钮
-            hideQueryButton();
-
-            // 直接执行高亮功能
-            highlightSelectedText();
-        };
-
         // 鼠标悬停效果
         queryBtn.onmouseenter = function () {
             this.style.background = '#5a6fd8';
@@ -2010,20 +2363,8 @@ function showQueryButton(selection, contents) {
             this.style.background = '#667eea';
             this.style.transform = 'scale(1)';
         };
-
-        highlightBtn.onmouseenter = function () {
-            this.style.background = '#218838';
-            this.style.transform = 'scale(1.05)';
-        };
-
-        highlightBtn.onmouseleave = function () {
-            this.style.background = '#28a745';
-            this.style.transform = 'scale(1)';
-        };
-
-        // 组装按钮
-        buttonContainer.appendChild(queryBtn);
-        buttonContainer.appendChild(highlightBtn);
+        
+        // 添加按钮到容器（剩余的按钮已在条件分支中添加）
         document.body.appendChild(buttonContainer);
 
         // 5秒后自动隐藏
@@ -2040,6 +2381,8 @@ function hideQueryButton() {
     if (existingBtn) {
         existingBtn.remove();
     }
+    // 清理临时的注释ID
+    currentHighlightAnnotationId = null;
 }
 
 // 显示加载提示
@@ -2219,6 +2562,15 @@ async function hideDictionaryModal() {
         // 关闭面板后自动高亮查询的文本
         if (currentQueriedWord) {
             console.log('🎨 词典面板关闭，开始自动高亮查询文本:', currentQueriedWord);
+            
+            // 检查是否已经高亮（可能用户在查询前或查询时已经点击了高亮按钮）
+            if (window.lastSelectedCfiRange && isAlreadyHighlighted(window.lastSelectedCfiRange)) {
+                console.log('📌 [高亮追踪] 文本已经高亮，跳过自动高亮');
+                // 清除当前查询的单词
+                currentQueriedWord = null;
+                return;
+            }
+            
             try {
                 // 直接调用高亮函数，使用已选择的文本和CFI范围
                 const success = highlightSelectedText();
@@ -2251,6 +2603,7 @@ window.Dictionary = {
     search: searchWord,
     searchSelected: searchSelectedText,
     highlight: highlightSelectedText,
+    deleteHighlight: deleteHighlight,
     copy: copySelectedText,
     clear: clearSearch,
     clearSelection: clearCurrentSelection,
@@ -2262,7 +2615,12 @@ window.Dictionary = {
     playAudio: playAudio,
     saveHighlight: saveHighlightToBackend,
     loadHighlights: loadAndRestoreHighlights,
-    clearHighlights: clearCurrentPageHighlights
+    clearHighlights: clearCurrentPageHighlights,
+    // 暴露高亮追踪器的方法供调试使用
+    getHighlightedCFIs: () => Array.from(highlightTracker),
+    clearTracker: clearHighlightTracker,
+    isHighlighted: isAlreadyHighlighted,
+    findAnnotationId: findAnnotationIdByCfi
 };
 
 // 也暴露为全局函数，供HTML直接调用
