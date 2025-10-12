@@ -2,7 +2,7 @@
 """
 数据管理模块
 负责管理书籍数据、文件路径和阅读进度的加载、保存和操作
-现在使用SQLite作为默认数据后端
+现在使用SQLite作为默认数据后端（包括注释数据）
 """
 
 import json
@@ -10,23 +10,23 @@ import os
 import time
 from typing import Dict, Any, Optional, List
 
-# 导入注释管理器
-try:
-    from annotations_manager import get_annotation_manager
-    ANNOTATIONS_AVAILABLE = True
-except ImportError:
-    print("⚠️ [DataManager] 注释管理器不可用")
-    ANNOTATIONS_AVAILABLE = False
-
 # 使用SQLite作为默认后端
 try:
     from data_sqlite import SQLiteDataManager as BackendDataManager
     USE_SQLITE = True
-    print("📚 [DataManager] 使用SQLite后端")
+    print("📚 [DataManager] 使用SQLite后端（包括注释）")
 except ImportError:
     print("❌ [DataManager] SQLite后端不可用，回退到JSON后端")
     USE_SQLITE = False
     BackendDataManager = None
+    
+    # 如果SQLite不可用，才导入注释管理器
+    try:
+        from annotations_manager import get_annotation_manager
+        ANNOTATIONS_AVAILABLE = True
+    except ImportError:
+        print("⚠️ [DataManager] 注释管理器不可用")
+        ANNOTATIONS_AVAILABLE = False
 
 
 class DataManager:
@@ -279,105 +279,98 @@ class DataManager:
         if invalid_books:
             print(f"📚 [DataManager] 清理了 {len(invalid_books)} 个无效书籍")
     
-    # 注释管理方法（代理到注释管理器）
+    # 注释管理方法（如果使用JSON后端才代理到注释管理器）
     def add_annotation(self, book_id: str, annotation_data: Dict[str, Any]) -> Optional[str]:
         """添加注释"""
-        if not ANNOTATIONS_AVAILABLE:
-            print("⚠️ [DataManager] 注释管理器不可用")
-            return None
-        
-        try:
-            annotation_manager = get_annotation_manager()
-            annotation_id = annotation_manager.add_annotation(book_id, annotation_data)
-            annotation_manager.save_data()
-            return annotation_id
-        except Exception as e:
-            print(f"❌ [DataManager] 添加注释失败: {e}")
-            return None
+        # JSON后端才使用独立的注释管理器
+        if not USE_SQLITE and ANNOTATIONS_AVAILABLE:
+            try:
+                annotation_manager = get_annotation_manager()
+                annotation_id = annotation_manager.add_annotation(book_id, annotation_data)
+                annotation_manager.save_data()
+                return annotation_id
+            except Exception as e:
+                print(f"❌ [DataManager] 添加注释失败: {e}")
+                return None
+        return None
     
     def get_book_annotations(self, book_id: str, annotation_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """获取书籍注释"""
-        if not ANNOTATIONS_AVAILABLE:
-            return []
-        
-        try:
-            annotation_manager = get_annotation_manager()
-            return annotation_manager.get_book_annotations(book_id, annotation_type)
-        except Exception as e:
-            print(f"❌ [DataManager] 获取注释失败: {e}")
-            return []
+        # JSON后端才使用独立的注释管理器
+        if not USE_SQLITE and ANNOTATIONS_AVAILABLE:
+            try:
+                annotation_manager = get_annotation_manager()
+                return annotation_manager.get_book_annotations(book_id, annotation_type)
+            except Exception as e:
+                print(f"❌ [DataManager] 获取注释失败: {e}")
+        return []
     
     def remove_annotation(self, book_id: str, annotation_id: str) -> bool:
         """删除注释"""
-        if not ANNOTATIONS_AVAILABLE:
-            return False
-        
-        try:
-            annotation_manager = get_annotation_manager()
-            result = annotation_manager.remove_annotation(book_id, annotation_id)
-            if result:
-                annotation_manager.save_data()
-            return result
-        except Exception as e:
-            print(f"❌ [DataManager] 删除注释失败: {e}")
-            return False
+        # JSON后端才使用独立的注释管理器
+        if not USE_SQLITE and ANNOTATIONS_AVAILABLE:
+            try:
+                annotation_manager = get_annotation_manager()
+                result = annotation_manager.remove_annotation(book_id, annotation_id)
+                if result:
+                    annotation_manager.save_data()
+                return result
+            except Exception as e:
+                print(f"❌ [DataManager] 删除注释失败: {e}")
+        return False
     
     def update_annotation(self, book_id: str, annotation_id: str, updates: Dict[str, Any]) -> bool:
         """更新注释"""
-        if not ANNOTATIONS_AVAILABLE:
-            return False
-        
-        try:
-            annotation_manager = get_annotation_manager()
-            result = annotation_manager.update_annotation(book_id, annotation_id, updates)
-            if result:
-                annotation_manager.save_data()
-            return result
-        except Exception as e:
-            print(f"❌ [DataManager] 更新注释失败: {e}")
-            return False
+        # JSON后端才使用独立的注释管理器
+        if not USE_SQLITE and ANNOTATIONS_AVAILABLE:
+            try:
+                annotation_manager = get_annotation_manager()
+                result = annotation_manager.update_annotation(book_id, annotation_id, updates)
+                if result:
+                    annotation_manager.save_data()
+                return result
+            except Exception as e:
+                print(f"❌ [DataManager] 更新注释失败: {e}")
+        return False
     
     def clear_book_annotations(self, book_id: str, annotation_type: Optional[str] = None) -> int:
         """清除书籍注释"""
-        if not ANNOTATIONS_AVAILABLE:
-            return 0
-        
-        try:
-            annotation_manager = get_annotation_manager()
-            count = annotation_manager.clear_book_annotations(book_id, annotation_type)
-            if count > 0:
-                annotation_manager.save_data()
-            return count
-        except Exception as e:
-            print(f"❌ [DataManager] 清除注释失败: {e}")
-            return 0
+        # JSON后端才使用独立的注释管理器
+        if not USE_SQLITE and ANNOTATIONS_AVAILABLE:
+            try:
+                annotation_manager = get_annotation_manager()
+                count = annotation_manager.clear_book_annotations(book_id, annotation_type)
+                if count > 0:
+                    annotation_manager.save_data()
+                return count
+            except Exception as e:
+                print(f"❌ [DataManager] 清除注释失败: {e}")
+        return 0
     
     def export_book_annotations(self, book_id: str) -> Optional[Dict[str, Any]]:
         """导出书籍注释"""
-        if not ANNOTATIONS_AVAILABLE:
-            return None
-        
-        try:
-            annotation_manager = get_annotation_manager()
-            return annotation_manager.export_book_annotations(book_id)
-        except Exception as e:
-            print(f"❌ [DataManager] 导出注释失败: {e}")
-            return None
+        # JSON后端才使用独立的注释管理器
+        if not USE_SQLITE and ANNOTATIONS_AVAILABLE:
+            try:
+                annotation_manager = get_annotation_manager()
+                return annotation_manager.export_book_annotations(book_id)
+            except Exception as e:
+                print(f"❌ [DataManager] 导出注释失败: {e}")
+        return None
     
     def import_book_annotations(self, book_id: str, import_data: Dict[str, Any], merge: bool = True) -> bool:
         """导入书籍注释"""
-        if not ANNOTATIONS_AVAILABLE:
-            return False
-        
-        try:
-            annotation_manager = get_annotation_manager()
-            result = annotation_manager.import_book_annotations(book_id, import_data, merge)
-            if result:
-                annotation_manager.save_data()
-            return result
-        except Exception as e:
-            print(f"❌ [DataManager] 导入注释失败: {e}")
-            return False
+        # JSON后端才使用独立的注释管理器
+        if not USE_SQLITE and ANNOTATIONS_AVAILABLE:
+            try:
+                annotation_manager = get_annotation_manager()
+                result = annotation_manager.import_book_annotations(book_id, import_data, merge)
+                if result:
+                    annotation_manager.save_data()
+                return result
+            except Exception as e:
+                print(f"❌ [DataManager] 导入注释失败: {e}")
+        return False
     
     # 统计方法
     def get_stats(self) -> Dict[str, int]:

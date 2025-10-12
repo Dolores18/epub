@@ -12,14 +12,6 @@ from typing import Dict, Any, Optional, List
 import uuid
 from datetime import datetime
 
-# 导入注释管理器
-try:
-    from annotations_manager import get_annotation_manager
-    ANNOTATIONS_AVAILABLE = True
-except ImportError:
-    print("⚠️ [SQLiteDataManager] 注释管理器不可用")
-    ANNOTATIONS_AVAILABLE = False
-
 
 class SQLiteDataManager:
     """SQLite数据管理器类 - 统一管理所有应用数据"""
