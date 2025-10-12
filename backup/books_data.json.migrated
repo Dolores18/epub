@@ -1,0 +1,213 @@
+{
+  "books": {
+    "book_5c4a5f17_34c003f0": {
+      "title": "三日間の幸福 (メディアワークス文庫)",
+      "author": "三秋 縋",
+      "filename": "mittukann.epub",
+      "addedDate": "1753824585577",
+      "language": "ja",
+      "fileSize": 333502,
+      "publisher": "株式会社KADOKAWA",
+      "description": "",
+      "identifier": "41f08dd3-1150-458a-99f1-0e067e4674a6",
+      "coverPath": "books/covers/book_5c4a5f17_34c003f0.jpg",
+      "fontFamily": null,
+      "fontMode": "auto"
+    },
+    "book_73bc7ffc_2101765a": {
+      "title": "ノルウェーの森",
+      "author": "村上春樹",
+      "filename": "noruwei.epub",
+      "addedDate": "1753825033013",
+      "language": "ja",
+      "fileSize": 353323,
+      "publisher": "講談社",
+      "description": "",
+      "identifier": "87da2ed9-eef8-41bd-8c59-0b8f5583cd5a",
+      "coverPath": "books/covers/book_73bc7ffc_2101765a.jpg",
+      "fontFamily": null,
+      "fontMode": "auto"
+    },
+    "book_ca3060eb_3c2349fb": {
+      "title": "芥川龍之介 作品全集",
+      "author": "芥川龍之介",
+      "filename": "芥川龍之介 作品全集 (芥川龍之介) (Z-Library).epub",
+      "addedDate": "1754060676910",
+      "language": "ja",
+      "fileSize": 2860074,
+      "publisher": "未知出版商",
+      "description": "",
+      "identifier": "0dc823f8-990c-463d-8baa-adcb7dea66ef",
+      "coverPath": "books/covers/book_ca3060eb_3c2349fb.jpg",
+      "fontFamily": null,
+      "fontMode": "auto"
+    },
+    "book_f857e3e4_28c3c67c": {
+      "title": "仏教の大意 (角川ソフィア文庫)",
+      "author": "鈴木 大拙",
+      "filename": "52651.epub",
+      "addedDate": "1754995113868",
+      "language": "ja",
+      "fileSize": 242481,
+      "publisher": "KADOKAWA / 角川学芸出版",
+      "description": "",
+      "identifier": "mobi-asin:B01MR7MLL6",
+      "coverPath": "books/covers/book_f857e3e4_28c3c67c.jpg",
+      "fontFamily": null,
+      "fontMode": "auto"
+    },
+    "book_8b00b36a_6c027a59": {
+      "title": "金閣寺",
+      "author": "三島由紀夫",
+      "filename": "金閣寺 (三島由紀夫) (Z-Library).epub",
+      "addedDate": "1755402413553",
+      "language": "ja",
+      "fileSize": 1074998,
+      "publisher": "未知出版商",
+      "description": "",
+      "identifier": "calibre:1017",
+      "coverPath": "books/covers/book_8b00b36a_6c027a59.jpg",
+      "fontFamily": null,
+      "fontMode": "auto"
+    },
+    "book_7a920962_272f0d83": {
+      "title": "いたいのいたいの、とんでゆけ (メディアワークス文庫)",
+      "author": "三秋 縋",
+      "filename": "いたいのいたいの、とんでゆけ (メディアワークス文庫) (三秋 縋) (Z-Library).epub",
+      "addedDate": "1755410131935",
+      "language": "ja",
+      "fileSize": 732126,
+      "publisher": "株式会社KADOKAWA",
+      "description": "",
+      "identifier": "mobi-asin:B016U1ZMD2",
+      "coverPath": "books/covers/book_7a920962_272f0d83.jpg",
+      "fontFamily": null,
+      "fontMode": "auto"
+    },
+    "book_f6f906d0_1d639d8b": {
+      "title": "The Federalist Papers",
+      "author": "Alexander Hamilton",
+      "filename": "The Federalist Papers (Clinton Rossiter (ed.) Charles R. Kessler) (Z-Library).epub",
+      "addedDate": "1755876484162",
+      "language": "en",
+      "fileSize": 1020327,
+      "publisher": "Penguin Publishing Group",
+      "description": "",
+      "identifier": "B000Q360D2",
+      "coverPath": "books/covers/book_f6f906d0_1d639d8b.jpg",
+      "fontFamily": null,
+      "fontMode": "auto"
+    },
+    "book_594c6741_707dab4a": {
+      "title": "TheEconomist.2025.06.28",
+      "author": "Kovid Goyal",
+      "filename": "TheEconomist.2025.06.28.epub",
+      "addedDate": "1757812379030",
+      "language": "en",
+      "fileSize": 6185437,
+      "publisher": "未知出版商",
+      "description": "Articles in this issue:\nPolitics\nBusiness\nThe weekly cartoon\nHow to win peace in the Middle East\nRFK’s loopy approach to vaccines endangers Americans \nHow the defence bonanza will reshape the global economy \nBanning the opposition is no way to revive Bangladesh’s democracy  \nChinese brands are sweeping the world. Good \nA closer look at American finance\nThe UN’s dysfunction undermines global security, argue Ban Ki-moon and Helen Clark\nIsrael’s war with Iran is over \nHow much did America’s bombs damage Iran’s nuclear programme?\nThe war in Ukraine shows the West can re-arm without re-industrialising  \nThe fallout from Trump’s Iran strikes is political, too\nThe meaning of Zohran Mamdani’s win in New York\nWhy America’s hospitals don’t want their taxes cut\nEven for $10bn, the Los Angeles Lakers may look like a bargain\nOklahoma City has been reborn, 30 years after the bombing\nRobert F. Kennedy looks set to mess with vaccines\nHas Donald Trump solved Iran from the air?\n...",
+      "identifier": "d6ae9058-469f-4d03-a182-589a7fd6c986",
+      "coverPath": "books/covers/book_594c6741_707dab4a.jpg",
+      "fontFamily": null,
+      "fontMode": "auto"
+    },
+    "book_43a4b5d7_ee9bf0af": {
+      "title": "Thought Reform and the Psychology of Totalism",
+      "author": "Robert Jay Lifton",
+      "filename": "236690.epub",
+      "addedDate": "1758507684645",
+      "language": "en",
+      "fileSize": 578383,
+      "publisher": "The University of North Carolina Press",
+      "description": "",
+      "identifier": "B006M9RZQA",
+      "coverPath": "books/covers/book_43a4b5d7_ee9bf0af.jpg",
+      "fontFamily": null,
+      "fontMode": "auto"
+    },
+    "book_8c815d36_9ddb7b91": {
+      "title": "Reflections on the Revolution in France",
+      "author": "Edmund Burke",
+      "filename": "Reflections on the Revolution in France (Edmund Burke) (Z-Library) (1).epub",
+      "addedDate": "1758559153283",
+      "language": "en",
+      "fileSize": 2075590,
+      "publisher": "Penguin Books Ltd",
+      "description": "<p>Burke's seminal work was written during the early months of the French Revolution, and it predicted with uncanny accuracy many of its worst excesses, including the Reign of Terror. A scathing attack on the revolution's attitudes to existing institutions, property and religion, it makes a cogent case for upholding inherited rights and established customs, argues for piecemeal reform rather than revolutionary change - and deplores the influence Burke feared the revolution might have in Britain. Reflections on the Revolution in France is now widely regarded as a classic statement of conservative political thought, and is one of the eighteenth century's great works of political rhetoric.",
+      "identifier": "9780141907888",
+      "coverPath": null,
+      "fontFamily": "Bookerly, Georgia, 'Times New Roman', serif",
+      "fontMode": "manual"
+    }
+  },
+  "book_files": {
+    "book_5c4a5f17_34c003f0": "books/book_5c4a5f17_34c003f0.epub",
+    "book_73bc7ffc_2101765a": "books/book_73bc7ffc_2101765a.epub",
+    "book_ca3060eb_3c2349fb": "books/book_ca3060eb_3c2349fb.epub",
+    "book_f857e3e4_28c3c67c": "books/book_f857e3e4_28c3c67c.epub",
+    "book_8b00b36a_6c027a59": "books/book_8b00b36a_6c027a59.epub",
+    "book_7a920962_272f0d83": "books/book_7a920962_272f0d83.epub",
+    "book_f6f906d0_1d639d8b": "books/book_f6f906d0_1d639d8b.epub",
+    "book_594c6741_707dab4a": "books/book_594c6741_707dab4a.epub",
+    "book_43a4b5d7_ee9bf0af": "books/book_43a4b5d7_ee9bf0af.epub",
+    "book_8c815d36_9ddb7b91": "books/book_8c815d36_9ddb7b91.epub"
+  },
+  "reading_progress": {
+    "book_73bc7ffc_2101765a": {
+      "cfi": "epubcfi(/6/26!/4/398/1:0)",
+      "percentage": 0.9897959183673469,
+      "chapterTitle": "\n        第十一章\n      ",
+      "timestamp": 1758567119293
+    },
+    "book_5c4a5f17_34c003f0": {
+      "cfi": "epubcfi(/6/18!/4/2/4[toc-004]/1:0)",
+      "percentage": 0.1956521739130435,
+      "chapterTitle": "\n        ４．答えあわせといきましょう\n      ",
+      "timestamp": 1758674386196
+    },
+    "book_ca3060eb_3c2349fb": {
+      "cfi": "epubcfi(/6/336!/4[4U9TC0-a55a7886119f469dae36ee7061e37428]/2[calibre_pb_0]/4/1:0)",
+      "percentage": 0.4746916205869843,
+      "chapterTitle": "\n        第164章 将軍(新字新仮名)\n      ",
+      "timestamp": 1755395332753
+    },
+    "book_f857e3e4_28c3c67c": {
+      "cfi": "epubcfi(/6/14!/4/2/6[toc-003]/2/1:0)",
+      "percentage": 0.4788732394366197,
+      "chapterTitle": "第二講　大悲",
+      "timestamp": 1754996550662
+    },
+    "book_8b00b36a_6c027a59": {
+      "cfi": "epubcfi(/6/12!/4/2/32/11:0)",
+      "percentage": 0.024390243902439025,
+      "chapterTitle": "第　一　章",
+      "timestamp": 1758564753793
+    },
+    "book_7a920962_272f0d83": {
+      "cfi": "epubcfi(/6/32!/4/2/160/1:0)",
+      "percentage": 0.3558282208588957,
+      "chapterTitle": "未知章节",
+      "timestamp": 1758674391028
+    },
+    "book_f6f906d0_1d639d8b": {
+      "cfi": "epubcfi(/6/24!/4[page_27]/2[anchor-0_1_5766449811a61acb_1074]/1:0)",
+      "percentage": 0.07147673634524612,
+      "chapterTitle": "未知章节",
+      "timestamp": 1759356382165
+    },
+    "book_43a4b5d7_ee9bf0af": {
+      "cfi": "epubcfi(/6/30!/4/2/44/2/1:589)",
+      "percentage": 0.14248704663212436,
+      "chapterTitle": "未知章节",
+      "timestamp": 1758567128844
+    },
+    "book_8c815d36_9ddb7b91": {
+      "cfi": "epubcfi(/6/8!/4/78/1:227)",
+      "percentage": 0.04039301310043668,
+      "chapterTitle": "\n        INTRODUCTION\n      ",
+      "timestamp": 1759356746194
+    }
+  },
+  "saved_at": 1759356746.194965
+}

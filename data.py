@@ -2,6 +2,7 @@
 """
 数据管理模块
 负责管理书籍数据、文件路径和阅读进度的加载、保存和操作
+现在使用SQLite作为默认数据后端
 """
 
 import json
@@ -16,6 +17,16 @@ try:
 except ImportError:
     print("⚠️ [DataManager] 注释管理器不可用")
     ANNOTATIONS_AVAILABLE = False
+
+# 使用SQLite作为默认后端
+try:
+    from data_sqlite import SQLiteDataManager as BackendDataManager
+    USE_SQLITE = True
+    print("📚 [DataManager] 使用SQLite后端")
+except ImportError:
+    print("❌ [DataManager] SQLite后端不可用，回退到JSON后端")
+    USE_SQLITE = False
+    BackendDataManager = None
 
 
 class DataManager:
@@ -403,10 +414,13 @@ class DataManager:
 
 
 # 全局数据管理器实例
-data_manager = DataManager()
+if USE_SQLITE and BackendDataManager:
+    data_manager = BackendDataManager()
+else:
+    data_manager = DataManager()
 
 
-def get_data_manager() -> DataManager:
+def get_data_manager():
     """获取全局数据管理器实例"""
     return data_manager
 
