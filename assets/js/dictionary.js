@@ -44,6 +44,43 @@ let currentHighlightAnnotationId = null;
 // 高亮追踪器 - 用于防止重复高亮
 const highlightTracker = new Set();
 
+/**
+ * 从Selection对象中获取文本，过滤掉振假名（ruby标签中的rt内容）
+ * @param {Selection} selection - 浏览器Selection对象
+ * @returns {string} 过滤后的文本（只包含汉字，不包含振假名）
+ */
+function getTextWithoutRuby(selection) {
+    if (!selection || selection.rangeCount === 0) {
+        return '';
+    }
+
+    try {
+        // 获取选中的Range
+        const range = selection.getRangeAt(0);
+        
+        // 克隆选中的内容到一个临时容器
+        const clonedContent = range.cloneContents();
+        const tempDiv = document.createElement('div');
+        tempDiv.appendChild(clonedContent);
+        
+        // 移除所有的<rt>标签（振假名）
+        const rtElements = tempDiv.querySelectorAll('rt');
+        rtElements.forEach(rt => rt.remove());
+        
+        // 获取纯文本
+        const text = tempDiv.textContent || tempDiv.innerText || '';
+        
+        console.log('🔍 [getTextWithoutRuby] 原始文本:', selection.toString());
+        console.log('🔍 [getTextWithoutRuby] 过滤后文本:', text);
+        
+        return text;
+    } catch (error) {
+        console.error('❌ [getTextWithoutRuby] 处理失败，回退到默认方法:', error);
+        // 如果出错，回退到默认的toString方法
+        return selection.toString();
+    }
+}
+
 // 解析CFI范围字符串，提取关键位置信息
 function parseCfiRange(cfiRange) {
     // CFI格式示例: epubcfi(/6/8!/4/4[int]/6,/3:9,/3:17)
@@ -675,8 +712,9 @@ function bindEpubSelectionEvents() {
                 const selection = contents.window.getSelection();
                 console.log('🔍 selection对象:', selection);
 
-                const text = selection.toString().trim();
-                console.log('🔍 获取到的文本:', `"${text}"`);
+                // 获取文本，过滤掉振假名
+                const text = getTextWithoutRuby(selection).trim();
+                console.log('🔍 获取到的文本（已过滤振假名）:', `"${text}"`);
                 console.log('🔍 文本长度:', text.length);
 
                 if (text && text.length > 0 && text.length < 100) {
@@ -727,8 +765,9 @@ function bindEpubSelectionEvents() {
                 const selection = contents.window.getSelection();
                 console.log('🔍 selection对象:', selection);
 
-                const text = selection.toString().trim();
-                console.log('🔍 获取到的文本:', `"${text}"`);
+                // 获取文本，过滤掉振假名
+                const text = getTextWithoutRuby(selection).trim();
+                console.log('🔍 获取到的文本（已过滤振假名）:', `"${text}"`);
 
                 if (text && text.length > 0 && text.length < 100) {
                     selectedText = text;
@@ -1398,10 +1437,11 @@ function searchSelectedText() {
             for (const view of views) {
                 if (view.document) {
                     const selection = (view.window || view.document.defaultView).getSelection();
-                    const text = selection.toString().trim();
+                    // 获取文本，过滤掉振假名
+                    const text = getTextWithoutRuby(selection).trim();
                     if (text) {
                         currentSelectedText = text;
-                        console.log('🔍 从epub获取当前选中文本:', currentSelectedText);
+                        console.log('🔍 从epub获取当前选中文本（已过滤振假名）:', currentSelectedText);
                         break;
                     }
                 }

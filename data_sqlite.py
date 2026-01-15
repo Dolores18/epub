@@ -12,6 +12,8 @@ from typing import Dict, Any, Optional, List
 import uuid
 from datetime import datetime
 
+from models import DatabaseSchema, BookModel, ReadingProgressModel, AnnotationModel
+
 
 class SQLiteDataManager:
     """SQLite数据管理器类 - 统一管理所有应用数据"""
@@ -22,75 +24,8 @@ class SQLiteDataManager:
         print(f"📚 [SQLiteDataManager] 初始化完成，数据库文件: {self.db_file}")
     
     def _init_database(self) -> None:
-        """初始化数据库表结构"""
-        with sqlite3.connect(self.db_file) as conn:
-            cursor = conn.cursor()
-            
-            # 创建书籍表
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS books (
-                    book_id TEXT PRIMARY KEY,
-                    title TEXT NOT NULL,
-                    author TEXT,
-                    filename TEXT,
-                    file_path TEXT,
-                    added_date INTEGER,
-                    language TEXT,
-                    file_size INTEGER,
-                    publisher TEXT,
-                    description TEXT,
-                    identifier TEXT,
-                    cover_path TEXT,
-                    font_family TEXT,
-                    font_mode TEXT DEFAULT 'auto',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # 创建阅读进度表
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS reading_progress (
-                    book_id TEXT PRIMARY KEY,
-                    cfi TEXT,
-                    percentage REAL DEFAULT 0.0,
-                    chapter_title TEXT,
-                    timestamp INTEGER,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (book_id) REFERENCES books (book_id) ON DELETE CASCADE
-                )
-            ''')
-            
-            # 创建注释表
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS annotations (
-                    id TEXT PRIMARY KEY,
-                    book_id TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    cfi_range TEXT,
-                    text TEXT,
-                    color TEXT,
-                    class_name TEXT,
-                    note TEXT,
-                    source TEXT,
-                    chapter_title TEXT,
-                    chapter_index INTEGER,
-                    timestamp INTEGER,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (book_id) REFERENCES books (book_id) ON DELETE CASCADE
-                )
-            ''')
-            
-            # 创建索引
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_books_title ON books (title)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_books_author ON books (author)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_annotations_book_id ON annotations (book_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_annotations_type ON annotations (type)')
-            
-            conn.commit()
-            print("📚 [SQLiteDataManager] 数据库表结构初始化完成")
+        """初始化数据库"""
+        DatabaseSchema.init_database(self.db_file)
     
     def _get_connection(self) -> sqlite3.Connection:
         """获取数据库连接"""

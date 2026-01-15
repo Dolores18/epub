@@ -15,6 +15,14 @@ body {
     /* 防止滚动条 */
 }
 
+/* 振假名（ルビ）样式 - 复制时不包含振假名 */
+rt {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
 /* 定义日文字体 */
 @font-face {
     font-family: 'IPAexMincho';

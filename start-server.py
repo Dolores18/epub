@@ -33,7 +33,6 @@ data_manager = get_data_manager()
 BOOKS_STORAGE = data_manager.books
 BOOK_FILES = data_manager.book_files
 READING_PROGRESS = data_manager.reading_progress
-BOOKS_DATA_FILE = 'books_data.json'
 BOOKS_DIR = 'books'  # 书籍存储目录
 COVERS_DIR = 'books/covers'  # 封面存储目录
 
@@ -53,66 +52,7 @@ def ensure_books_directory():
         os.makedirs(COVERS_DIR)
         print(f"📁 创建封面存储目录: {COVERS_DIR}")
 
-def save_books_data():
-    """保存书籍数据到文件"""
-    try:
-        books_data = {
-            'books': BOOKS_STORAGE,
-            'book_files': BOOK_FILES,  # 改为永久文件路径
-            'reading_progress': READING_PROGRESS,  # 包含阅读进度
-            'saved_at': time.time()
-        }
-        
-        with open(BOOKS_DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(books_data, f, ensure_ascii=False, indent=2)
-        
-        print(f"📚 书籍数据已保存到 {BOOKS_DATA_FILE}")
-    except Exception as e:
-        print(f"❌ 保存书籍数据失败: {e}")
-
-def load_books_data():
-    """从文件加载书籍数据"""
-    global BOOKS_STORAGE, BOOK_FILES, READING_PROGRESS
-    
-    try:
-        # 确保书籍目录存在
-        ensure_books_directory()
-        
-        if os.path.exists(BOOKS_DATA_FILE):
-            with open(BOOKS_DATA_FILE, 'r', encoding='utf-8') as f:
-                books_data = json.load(f)
-            
-            BOOKS_STORAGE = books_data.get('books', {})
-            saved_book_files = books_data.get('book_files', {})
-            READING_PROGRESS = books_data.get('reading_progress', {})  # 加载阅读进度
-            
-            # 兼容旧格式：如果没有book_files但有temp_files，清空数据
-            if not saved_book_files and books_data.get('temp_files'):
-                print("⚠️  检测到旧格式数据，清空无效数据")
-                BOOKS_STORAGE = {}
-                saved_book_files = {}
-            
-            # 验证书籍文件是否还存在
-            valid_book_files = {}
-            for book_id, book_path in saved_book_files.items():
-                if os.path.exists(book_path):
-                    valid_book_files[book_id] = book_path
-                else:
-                    print(f"⚠️  书籍文件不存在，移除书籍: {book_id} ({book_path})")
-                    if book_id in BOOKS_STORAGE:
-                        del BOOKS_STORAGE[book_id]
-            
-            BOOK_FILES = valid_book_files
-            
-            print(f"📚 从 {BOOKS_DATA_FILE} 加载了 {len(BOOKS_STORAGE)} 本书籍")
-            print(f"📖 加载了 {len(READING_PROGRESS)} 个阅读进度记录")
-        else:
-            print(f"📚 数据文件 {BOOKS_DATA_FILE} 不存在，使用空数据")
-            
-    except Exception as e:
-        print(f"❌ 加载书籍数据失败: {e}")
-        BOOKS_STORAGE = {}
-        BOOK_FILES = {}
+# save_books_data 和 load_books_data 函数已从 data.py 导入，不需要重复定义
 
 class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def version_string(self):
@@ -540,10 +480,10 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 
                 data_manager.set_progress(book_id, progress_data)
                 
-                # 保存到文件
+                # 保存数据
                 data_manager.save_data()
                 
-                print(f"✅ [API] 阅读进度已保存到 {BOOKS_DATA_FILE}")
+                print(f"✅ [API] 阅读进度已保存")
                 
                 # 返回成功响应
                 self.send_response(200)
