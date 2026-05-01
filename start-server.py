@@ -162,7 +162,8 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     'success': True,
                     'bookId': book_id,
                     'fontFamily': font_data['fontFamily'],
-                    'fontMode': font_data['fontMode']
+                    'fontMode': font_data['fontMode'],
+                    'fontSize': font_data.get('fontSize')
                 }
                 print(f"🔤 [API] 返回字体设置: {font_data}")
             else:
@@ -590,6 +591,14 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 book_id = request_data.get('bookId')
                 font_family = request_data.get('fontFamily')
                 font_mode = request_data.get('fontMode', 'auto')
+                font_size = request_data.get('fontSize')  # 字体大小（可选）
+                
+                # 将fontSize转为整数（如果提供了的话）
+                if font_size is not None:
+                    try:
+                        font_size = int(font_size)
+                    except (ValueError, TypeError):
+                        font_size = None
                 
                 if not book_id:
                     self.send_error(400, "Missing bookId")
@@ -602,10 +611,19 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     return
                 
                 print(f"🔤 [API] 设置书籍字体: {book_id}")
-                print(f"🔤 [API] 字体: {font_family}, 模式: {font_mode}")
+                print(f"🔤 [API] 字体: {font_family}, 模式: {font_mode}, 大小: {font_size}")
+                
+                # 只传前端实际提供的字段（部分更新，不覆盖未传的字段）
+                kwargs = {}
+                if 'fontFamily' in request_data:
+                    kwargs['font_family'] = font_family
+                if 'fontMode' in request_data:
+                    kwargs['font_mode'] = font_mode
+                if 'fontSize' in request_data and font_size is not None:
+                    kwargs['font_size'] = font_size
                 
                 # 使用数据管理器设置字体
-                success = data_manager.set_book_font(book_id, font_family, font_mode)
+                success = data_manager.set_book_font(book_id, **kwargs)
                 
                 if success:
                     # 保存更新后的数据
@@ -623,7 +641,8 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         'message': f'书籍 "{book_info.get("title", book_id)}" 字体设置成功',
                         'bookId': book_id,
                         'fontFamily': font_family,
-                        'fontMode': font_mode
+                        'fontMode': font_mode,
+                        'fontSize': font_size
                     }
                     
                     self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))

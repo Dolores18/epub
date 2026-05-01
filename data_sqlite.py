@@ -48,8 +48,8 @@ class SQLiteDataManager:
                 INSERT OR REPLACE INTO books (
                     book_id, title, author, filename, file_path, added_date,
                     language, file_size, publisher, description, identifier,
-                    cover_path, font_family, font_mode, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    cover_path, font_family, font_mode, font_size, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ''', (
                 book_id,
                 book_info.get('title', ''),
@@ -64,7 +64,8 @@ class SQLiteDataManager:
                 book_info.get('identifier', ''),
                 book_info.get('coverPath', ''),
                 book_info.get('fontFamily'),
-                book_info.get('fontMode', 'auto')
+                book_info.get('fontMode', 'auto'),
+                book_info.get('fontSize')
             ))
             conn.commit()
         
@@ -143,6 +144,7 @@ class SQLiteDataManager:
                     'coverPath': row['cover_path'],
                     'fontFamily': row['font_family'],
                     'fontMode': row['font_mode'],
+                    'fontSize': row['font_size'],
                     'file_path': row['file_path']
                 }
             return None
@@ -177,7 +179,8 @@ class SQLiteDataManager:
                     'identifier': row['identifier'],
                     'coverPath': row['cover_path'],
                     'fontFamily': row['font_family'],
-                    'fontMode': row['font_mode']
+                    'fontMode': row['font_mode'],
+                    'fontSize': row['font_size']
                 }
         
         return books
@@ -196,36 +199,58 @@ class SQLiteDataManager:
         return book_files
     
     # 字体设置管理方法
-    def set_book_font(self, book_id: str, font_family: str = None, font_mode: str = 'auto') -> bool:
-        """设置书籍字体"""
+    _NOT_PROVIDED = object()  # 哨兵值，区分"未传"和"传了None"
+    
+    def set_book_font(self, book_id: str, font_family=_NOT_PROVIDED, font_mode=_NOT_PROVIDED, font_size=_NOT_PROVIDED) -> bool:
+        """设置书籍字体（部分更新：只更新传入的字段，不覆盖未传的字段）"""
+        updates = []
+        params = []
+        
+        if font_family is not self._NOT_PROVIDED:
+            updates.append('font_family = ?')
+            params.append(font_family)
+        if font_mode is not self._NOT_PROVIDED:
+            updates.append('font_mode = ?')
+            params.append(font_mode)
+        if font_size is not self._NOT_PROVIDED:
+            updates.append('font_size = ?')
+            params.append(font_size)
+        
+        if not updates:
+            return False
+        
+        updates.append('updated_at = CURRENT_TIMESTAMP')
+        params.append(book_id)
+        
+        sql = f"UPDATE books SET {', '.join(updates)} WHERE book_id = ?"
+        
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE books 
-                SET font_family = ?, font_mode = ?, updated_at = CURRENT_TIMESTAMP 
-                WHERE book_id = ?
-            ''', (font_family, font_mode, book_id))
+            cursor.execute(sql, params)
             
             if cursor.rowcount > 0:
                 conn.commit()
                 print(f"🔤 [SQLiteDataManager] 更新书籍字体设置: {book_id}")
-                print(f"🔤 [SQLiteDataManager] 字体: {font_family}, 模式: {font_mode}")
+                print(f"🔤 [SQLiteDataManager] 字体: {font_family if font_family is not self._NOT_PROVIDED else '(未变)'}, "
+                      f"模式: {font_mode if font_mode is not self._NOT_PROVIDED else '(未变)'}, "
+                      f"大小: {font_size if font_size is not self._NOT_PROVIDED else '(未变)'}")
                 return True
             else:
                 print(f"❌ [SQLiteDataManager] 书籍不存在: {book_id}")
                 return False
     
-    def get_book_font(self, book_id: str) -> Optional[Dict[str, str]]:
-        """获取书籍字体设置"""
+    def get_book_font(self, book_id: str) -> Optional[Dict[str, Any]]:
+        """获取书籍字体设置（包括字体族和字体大小）"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT font_family, font_mode FROM books WHERE book_id = ?', (book_id,))
+            cursor.execute('SELECT font_family, font_mode, font_size FROM books WHERE book_id = ?', (book_id,))
             row = cursor.fetchone()
             
             if row:
                 return {
                     'fontFamily': row['font_family'],
-                    'fontMode': row['font_mode'] or 'auto'
+                    'fontMode': row['font_mode'] or 'auto',
+                    'fontSize': row['font_size']
                 }
             return None
     

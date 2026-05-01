@@ -405,6 +405,9 @@ const ProgressManager = {
         console.log('📄 [退出] 🚀 开始调用保存阅读进度...');
         this.saveReadingProgress();
 
+        // 保存当前字体大小到后端
+        this.saveFontSize();
+
         // 延迟返回书架页面，确保保存完成
         console.log('📄 [退出] ⏰ 设置1秒延迟后返回书架');
         setTimeout(() => {
@@ -656,6 +659,47 @@ const ProgressManager = {
         this.saveProgressTimer = setTimeout(() => {
             this.saveReadingProgress();
         }, 200); // 改为200ms
+    },
+
+    // 保存字体大小到后端
+    saveFontSize() {
+        try {
+            const bookId = this.getBookId();
+            const fontSize = window.currentFontSize || 16;
+            
+            // 默认字体大小不保存
+            if (fontSize === 16) {
+                console.log('📄 [退出] 字体大小为默认值，跳过保存');
+                return;
+            }
+            
+            // 获取当前字体设置
+            const fontSettings = window.currentBookFontSettings || {};
+            const fontFamily = fontSettings.fontFamily || null;
+            const fontMode = fontSettings.fontMode || 'auto';
+            
+            console.log('📄 [退出] 🔤 保存字体大小:', fontSize, '书籍:', bookId);
+            
+            fetch('/api/book-font', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bookId: bookId,
+                    fontFamily: fontFamily,
+                    fontMode: fontMode,
+                    fontSize: fontSize
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('📄 [退出] ✅ 字体大小已保存:', data);
+            })
+            .catch(error => {
+                console.error('📄 [退出] ❌ 保存字体大小失败:', error);
+            });
+        } catch (error) {
+            console.error('📄 [退出] ❌ 保存字体大小异常:', error);
+        }
     },
 
     // 退出到书架页面

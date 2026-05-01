@@ -12,7 +12,7 @@ class DatabaseSchema:
     """数据库模式管理"""
     
     # 当前数据库版本
-    VERSION = 1
+    VERSION = 2
     
     @staticmethod
     def init_database(db_path: str) -> None:
@@ -92,6 +92,7 @@ class DatabaseSchema:
                 cover_path TEXT,
                 font_family TEXT,
                 font_mode TEXT DEFAULT 'auto',
+                font_size INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -162,10 +163,9 @@ class DatabaseSchema:
         """
         print(f"📚 [DatabaseSchema] 执行数据库迁移: v{from_version} -> v{to_version}")
         
-        # 这里可以添加版本迁移逻辑
-        # 例如：
-        # if from_version == 1 and to_version == 2:
-        #     DatabaseSchema._migrate_v1_to_v2(cursor)
+        # 版本迁移逻辑
+        if from_version < 2:
+            DatabaseSchema._migrate_v1_to_v2(cursor)
         
         # 更新版本号
         DatabaseSchema._set_version(cursor, to_version)
@@ -173,10 +173,15 @@ class DatabaseSchema:
     
     @staticmethod
     def _migrate_v1_to_v2(cursor: sqlite3.Cursor) -> None:
-        """从版本1迁移到版本2的示例"""
-        # 示例：添加新字段
-        # cursor.execute('ALTER TABLE books ADD COLUMN new_field TEXT')
-        pass
+        """从版本1迁移到版本2：添加font_size字段"""
+        try:
+            cursor.execute('ALTER TABLE books ADD COLUMN font_size INTEGER')
+            print("📚 [DatabaseSchema] 已添加 font_size 列")
+        except sqlite3.OperationalError as e:
+            if 'duplicate column name' in str(e).lower():
+                print("📚 [DatabaseSchema] font_size 列已存在，跳过")
+            else:
+                raise
 
 
 class BookModel:
@@ -191,7 +196,7 @@ class BookModel:
             'book_id', 'title', 'author', 'filename', 'file_path',
             'added_date', 'language', 'file_size', 'publisher',
             'description', 'identifier', 'cover_path', 'font_family',
-            'font_mode', 'created_at', 'updated_at'
+            'font_mode', 'font_size', 'created_at', 'updated_at'
         ]
 
 

@@ -60,9 +60,17 @@ async function loadBookFontSettings(bookId) {
         if (result.success) {
             currentBookFontSettings = {
                 fontFamily: result.fontFamily,
-                fontMode: result.fontMode
+                fontMode: result.fontMode,
+                fontSize: result.fontSize || null
             };
             console.log('🔤 [字体] 字体设置已加载:', currentBookFontSettings);
+            
+            // 如果有保存的字体大小，恢复它
+            if (currentBookFontSettings.fontSize) {
+                currentFontSize = currentBookFontSettings.fontSize;
+                console.log('🔤 [字体] 从后端恢复字体大小:', currentFontSize);
+            }
+            
             return currentBookFontSettings;
         } else {
             console.log('🔤 [字体] 无字体设置，使用默认值');
@@ -110,6 +118,7 @@ async function saveBookFontSettings(bookId, fontFamily, fontMode) {
             fontFamily: fontFamily,
             fontMode: fontMode
         };
+        window.currentBookFontSettings = currentBookFontSettings; // 同步到window供page.js退出时读取
         
         return true;
     } catch (error) {
@@ -156,6 +165,13 @@ function applyBookFontSettings() {
             rendition.themes.font(currentBookFontSettings.fontFamily);
             console.log('🔤 [字体] 已应用epub.js字体覆盖:', currentBookFontSettings.fontFamily);
         }
+    }
+    
+    // 应用字体大小（无论是自动还是手动模式）
+    if (currentBookFontSettings.fontSize && rendition) {
+        currentFontSize = currentBookFontSettings.fontSize;
+        rendition.themes.fontSize(currentFontSize + 'px');
+        console.log('🔤 [字体] 已应用后端保存的字体大小:', currentFontSize + 'px');
     }
 }
 
@@ -431,6 +447,8 @@ async function initReader(file = null) {
 
                 // 加载字体设置
                 await loadBookFontSettings(currentBookId);
+                window.currentBookFontSettings = currentBookFontSettings; // 供page.js退出时保存
+                window.currentFontSize = currentFontSize; // 供page.js退出时保存
 
                 debugLog('EPUB元数据:', metadata);
                 debugLog('检测到的语言:', language);
@@ -1233,6 +1251,7 @@ function changeFontSize(delta) {
 
         // 更新全局变量
         currentFontSize = newSize;
+        window.currentFontSize = newSize; // 同步到window供page.js退出时保存
 
         // 使用 epub.js 的主题系统设置字体大小
         rendition.themes.override({
