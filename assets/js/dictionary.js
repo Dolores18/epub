@@ -473,6 +473,7 @@ function addDictionaryStyles() {
             font-size: 16px;
             margin-bottom: 8px;
             font-weight: 500;
+            white-space: pre-wrap;
         }
         
         .word-type {
@@ -844,7 +845,7 @@ async function showWordInfo(word) {
                             </div>
                         ` : ''}
                         ${result.writings && result.writings !== word ? `<div class="word-writings">单词: ${result.writings}</div>` : ''}
-                        <div class="word-meaning">${result.meaning}</div>
+                        <div class="word-meaning" style="white-space: pre-wrap;">${result.meaning}</div>
                         <span class="word-type">${result.type}</span>
                         ${result.collins ? `<div class="word-source">柯林斯词典等级: ${result.collins}</div>` : ''}
                         ${result.oxford ? `<div class="word-source">牛津词典收录: ${result.oxford ? '是' : '否'}</div>` : ''}
@@ -882,7 +883,7 @@ async function showWordInfo(word) {
                         <h4>${word}</h4>
                         ${result.reading ? `<div class="word-reading">${result.reading}</div>` : ''}
                         ${result.writings ? `<div class="word-writings">书写形式: ${result.writings}</div>` : ''}
-                        <div class="word-meaning">${result.meaning}</div>
+                        <div class="word-meaning" style="white-space: pre-wrap;">${result.meaning}</div>
                         <span class="word-type">${result.type}</span>
                         ${result.source ? `<div class="word-source">来源: ${result.source}</div>` : ''}
                         ${result.examples && result.examples.length > 0 ? `
@@ -1205,6 +1206,8 @@ async function fetchEnglishDictionary(apiUrl, word) {
             };
             
             console.log('📚 处理后的英语结果:', result);
+            console.log('📚 meaning原始内容:', result.meaning);
+            console.log('📚 meaning包含换行符:', result.meaning.includes('\n'));
             return result;
         } else {
             console.log('❌ 英语API返回失败或未找到单词:', word, data);
@@ -2486,7 +2489,7 @@ async function showDictionaryWithResult(word, result) {
                     </div>
                 ` : ''}
                 ${result.writings ? `<div class="word-writings">书写形式: ${result.writings}</div>` : ''}
-                <div class="word-meaning">${result.meaning}</div>
+                <div class="word-meaning" style="white-space: pre-wrap;">${result.meaning}</div>
                 <span class="word-type">${result.type}</span>
                 ${result.collins ? `<div class="word-source">柯林斯词典等级: ${result.collins}</div>` : ''}
                 ${result.oxford ? `<div class="word-source">牛津词典收录: ${result.oxford ? '是' : '否'}</div>` : ''}
